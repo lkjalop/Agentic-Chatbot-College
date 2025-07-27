@@ -1,0 +1,139 @@
+import Groq from 'groq-sdk';
+import { z } from 'zod';
+
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
+
+export const IntentSchema = z.object({
+  type: z.enum([
+    'definition',
+    'comparison',
+    'prerequisite',
+    'career_path',
+    'next_steps',
+    'relationship',
+    'tutorial',
+    'recommendation',
+    'clarification'
+  ]),
+  confidence: z.number().min(0).max(1),
+  entities: z.array(z.string()),
+  searchStrategy: z.enum(['semantic', 'relationship', 'hybrid', 'career']),
+  clarificationNeeded: z.boolean(),
+  suggestedQueries: z.array(z.string()).optional()
+});
+
+export type Intent = z.infer<typeof IntentSchema>;
+
+export async function analyzeIntent(query: string): Promise<Intent> {
+  try {
+    const systemPrompt = `You are an intent analyzer for an educational RAG system. Analyze the user's query and return a JSON object with:
+- type: the intent type (definition, comparison, prerequisite, career_path, next_steps, relationship, tutorial, recommendation, clarification)
+- confidence: confidence score 0-1
+- entities: key concepts/topics mentioned
+- searchStrategy: best search approach (semantic, relationship, hybrid, career)
+- clarificationNeeded: if the query is unclear
+- suggestedQueries: alternative queries if clarification needed
+
+Examples:
+"What is React?" -> type: "definition", entities: ["react"], searchStrategy: "semantic"
+"What do I need to know before learning machine learning?" -> type: "prerequisite", entities: ["machine-learning"], searchStrategy: "relationship"
+"How to become a data scientist?" -> type: "career_path", entities: ["data-scientist"], searchStrategy: "career"`;
+
+    const completion = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: query }
+      ],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.1,
+      max_tokens: 500,
+      response_format: { type: 'json_object' }
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    if (!response) throw new Error('No response from Groq');
+
+    const parsed = JSON.parse(response);
+    return IntentSchema.parse(parsed);
+  } catch (error) {
+    console.error('Intent analysis error:', error);
+    return {
+      type: 'definition',
+      confidence: 0.5,
+      entities: query.split(' ').filter(w => w.length > 3),
+      searchStrategy: 'semantic',
+      clarificationNeeded: false
+    };
+  }
+}
+
+export async function enhanceQuery(query: string, intent: Intent): Promise<string> {
+  try {
+    const prompts: Record<string, string> = {
+      prerequisite: `List the fundamental prerequisites needed before learning: ${query}`,
+      career_path: `Career progression path and skills required for: ${query}`,
+      next_steps: `Advanced topics and next learning steps after: ${query}`,
+      relationship: `Explain the relationship and connections between: ${query}`,
+      comparison: `Compare and contrast the key differences in: ${query}`
+    };
+
+    const enhancedPrompt = prompts[intent.type] || query;
+
+    const completion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a query enhancer. Expand the user query to capture better search results. Keep it concise (under 50 words) and focused on key concepts.'
+        },
+        { role: 'user', content: enhancedPrompt }
+      ],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.3,
+      max_tokens: 100
+    });
+
+    return completion.choices[0]?.message?.content || query;
+  } catch (error) {
+    console.error('Query enhancement error:', error);
+    return query;
+  }
+}
+
+export async function generateResponse(
+  query: string,
+  searchResults: any[],
+  intent: Intent
+): Promise<string> {
+  try {
+    const context = searchResults.map(r => 
+      `Title: ${r.metadata?.title}\nContent: ${r.content}\nPrerequisites: ${r.metadata?.prerequisites?.join(', ')}\nLeads to: ${r.metadata?.leadsTo?.join(', ')}`
+    ).join('\n\n---\n\n');
+
+    const systemPrompt = `You are an educational assistant. Based on the search results, provide a helpful response to the user's query.
+For ${intent.type} queries, focus on:
+- prerequisite: List prerequisites in order, explain why each is important
+- career_path: Outline progression steps, required skills, timeline
+- next_steps: Suggest logical next topics to learn
+- relationship: Explain connections between concepts
+- comparison: Highlight key differences and similarities
+
+Keep responses concise, practical, and actionable.`;
+
+    const completion = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Query: ${query}\n\nSearch Results:\n${context}` }
+      ],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.7,
+      max_tokens: 500
+    });
+
+    return completion.choices[0]?.message?.content || 'I found some relevant information in the search results above.';
+  } catch (error) {
+    console.error('Response generation error:', error);
+    return 'I found relevant information in the search results. Please review them for details.';
+  }
+}
