@@ -14,7 +14,7 @@ export default function GenerateDataPage() {
     setMessage('');
 
     try {
-      const response = await fetch('/api/admin/generate-data', {
+      const response = await fetch('/api/admin/import-personas', {
         method: 'POST',
       });
 
@@ -22,10 +22,10 @@ export default function GenerateDataPage() {
 
       if (result.success) {
         setStatus('success');
-        setMessage(`Successfully generated ${result.count} data records!`);
+        setMessage(`Successfully imported ${result.count} personas, ${result.vectors} Q&As, and ${result.patterns} response patterns!`);
       } else {
         setStatus('error');
-        setMessage(result.error || 'Failed to generate data');
+        setMessage(result.error || 'Failed to import persona data');
       }
     } catch (error) {
       setStatus('error');
@@ -42,11 +42,11 @@ export default function GenerateDataPage() {
           <div className="text-center mb-8">
             <Database className="w-16 h-16 text-blue-600 mx-auto mb-4" />
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Generate Synthetic Data
+              Import Phase 9 Persona Data
             </h1>
             <p className="text-gray-600">
-              This will populate your vector database with sample educational content
-              for testing the RAG system.
+              This will import real student personas with their journey questions and 
+              empathetic responses for the persona-aware RAG system.
             </p>
           </div>
 
@@ -54,11 +54,11 @@ export default function GenerateDataPage() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="font-semibold text-blue-900 mb-2">What this will create:</h3>
               <ul className="text-sm text-blue-800 space-y-1">
-                <li>• 13 educational concepts (HTML, CSS, JavaScript, React, Python, etc.)</li>
-                <li>• Prerequisites and learning paths</li>
-                <li>• Career information</li>
-                <li>• Vector embeddings for semantic search</li>
-                <li>• Database metadata for relationship mapping</li>
+                <li>• 3 detailed student personas (Rohan Patel, Priya Sharma, Marcus Johnson)</li>
+                <li>• Real journey-based questions and empathetic answers</li>
+                <li>• Persona detection patterns and response guidelines</li>
+                <li>• Vector embeddings for persona-aware search</li>
+                <li>• Emotional support and cultural considerations</li>
               </ul>
             </div>
 
@@ -75,7 +75,7 @@ export default function GenerateDataPage() {
               ) : (
                 <div className="flex items-center justify-center space-x-2">
                   <Database className="w-5 h-5" />
-                  <span>Generate Synthetic Data</span>
+                  <span>Import Persona Data</span>
                 </div>
               )}
             </button>

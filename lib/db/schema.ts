@@ -105,3 +105,6 @@ export type SyntheticDataMeta = typeof syntheticDataMeta.$inferSelect;
 export type NewSyntheticDataMeta = typeof syntheticDataMeta.$inferInsert;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type NewAuditLog = typeof auditLogs.$inferInsert;
+
+// Export persona schemas
+export * from '../personas/persona-schemas';
