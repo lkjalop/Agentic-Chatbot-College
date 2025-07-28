@@ -110,7 +110,7 @@ export class PrivacyManager {
         createdAt: user.createdAt,
         lastLogin: user.lastLogin
       },
-      conversations: conversations.map(c => ({
+      conversations: conversations.map((c: any) => ({
         id: c.id,
         query: c.userQuery,
         agent: c.selectedAgent,
