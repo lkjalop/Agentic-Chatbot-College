@@ -254,3 +254,40 @@ export class AgenticRouter {
     }
   }
 }
+
+export async function routeToAgent(query: string, intent: Intent): Promise<string> {
+  const lowercaseQuery = query.toLowerCase();
+  
+  // Schedule agent for time/interview related queries
+  if (lowercaseQuery.includes('interview') || 
+      lowercaseQuery.includes('schedule') || 
+      lowercaseQuery.includes('appointment') ||
+      lowercaseQuery.includes('timeline') ||
+      lowercaseQuery.includes('when') ||
+      lowercaseQuery.includes('time')) {
+    return 'schedule';
+  }
+  
+  // Cultural agent for international/cultural queries
+  if (lowercaseQuery.includes('international') ||
+      lowercaseQuery.includes('cultural') ||
+      lowercaseQuery.includes('visa') ||
+      lowercaseQuery.includes('culture') ||
+      lowercaseQuery.includes('abroad') ||
+      lowercaseQuery.includes('foreign')) {
+    return 'cultural';
+  }
+  
+  // Voice agent for communication/presentation queries
+  if (lowercaseQuery.includes('presentation') ||
+      lowercaseQuery.includes('speaking') ||
+      lowercaseQuery.includes('communication') ||
+      lowercaseQuery.includes('voice') ||
+      lowercaseQuery.includes('verbal') ||
+      lowercaseQuery.includes('interview skills')) {
+    return 'voice';
+  }
+  
+  // Default to knowledge agent for general career queries
+  return 'knowledge';
+}

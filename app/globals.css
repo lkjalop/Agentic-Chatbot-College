@@ -24,6 +24,33 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
+
+    /* Employability Advantage Brand Design System */
+    --ea-navy: #1e3a5f;
+    --ea-navy-dark: #152a47;
+    --ea-orange: #ff6b35;
+    --ea-orange-dark: #e55a2b;
+    --ea-white: #ffffff;
+    --ea-gray-light: #f8f9fa;
+    --ea-gray-border: #e5e7eb;
+    --ea-text-primary: #1e3a5f;
+    --ea-text-secondary: #6b7280;
+    --ea-text-light: #9ca3af;
+    --ea-shadow-sm: 0 2px 8px rgba(30, 58, 95, 0.08);
+    --ea-shadow-md: 0 4px 16px rgba(30, 58, 95, 0.12);
+    --ea-shadow-lg: 0 8px 32px rgba(30, 58, 95, 0.16);
+    --ea-radius: 8px;
+    --ea-radius-lg: 12px;
+    --ea-transition: all 0.2s ease;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--ea-white);
+    color: var(--ea-text-primary);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
@@ -111,4 +138,38 @@
 
 .animation-delay-400 {
   animation-delay: 0.4s;
+}
+
+/* EA Specific Animations */
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.1); }
+}
+
+@keyframes messageSlide {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes typing {
+  0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+  30% { opacity: 1; transform: scale(1); }
+}
+
+/* EA Accessibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--ea-orange);
+  outline-offset: 2px;
 }

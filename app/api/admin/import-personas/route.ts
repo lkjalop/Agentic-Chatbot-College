@@ -211,8 +211,7 @@ export async function POST(request: NextRequest) {
         .onConflictDoUpdate({
           target: studentPersonas.archetypeCode,
           set: {
-            ...persona,
-            updatedAt: new Date()
+            ...persona
           }
         })
         .returning();

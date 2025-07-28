@@ -39,7 +39,7 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
       const [conversation] = await db.insert(conversations).values({
         userId: 'anonymous',
         title: input.query.slice(0, 100),
-        metadata: { enhanced: true }
+        metadata: { tags: ['enhanced'] }
       }).returning();
       conversationId = conversation.id;
     }
@@ -61,9 +61,9 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
       resourceType: 'agentic_router',
       resourceId: conversationId,
       metadata: {
-        query: input.query,
-        useMemory: input.useMemory,
-        memorySize: memoryContext.length
+        searchQuery: input.query,
+        duration: 0,
+        resultCount: 0
       }
     });
 
@@ -71,7 +71,7 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
       conversationId,
       role: 'user',
       content: input.query,
-      metadata: { enhanced: true }
+      metadata: { entities: ['enhanced'] }
     }).returning();
 
     const router = new AgenticRouter({
@@ -105,10 +105,10 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
       role: 'assistant',
       content: summary || `Found ${routerResponse.results.length} results using ${routerResponse.intent.searchStrategy} search strategy.`,
       metadata: {
-        intent: routerResponse.intent,
-        resultCount: routerResponse.results.length,
-        searchStrategy: routerResponse.metadata.strategy,
-        processingTime: Date.now() - searchStart
+        intent: routerResponse.intent.type,
+        entities: routerResponse.intent.entities,
+        searchResults: routerResponse.results.slice(0, 3),
+        confidence: routerResponse.intent.confidence
       }
     }).returning();
 
@@ -116,8 +116,9 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
       .set({ 
         updatedAt: new Date(),
         metadata: {
-          lastIntent: routerResponse.intent.type,
-          totalMessages: memoryContext.length + 2
+          intent: routerResponse.intent.type,
+          tags: ['enhanced'],
+          satisfaction: routerResponse.intent.confidence
         }
       })
       .where(eq(conversations.id, conversationId));
@@ -130,8 +131,7 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
       metadata: {
         duration: Date.now() - searchStart,
         resultCount: routerResponse.results.length,
-        intent: routerResponse.intent.type,
-        confidence: routerResponse.intent.confidence
+        searchQuery: input.query
       },
       success: true
     });
@@ -155,7 +155,7 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
       resourceType: 'agentic_router',
       metadata: {
         error: error instanceof Error ? error.message : 'Unknown error',
-        query: formData.get('query') as string
+        searchQuery: formData.get('query') as string
       },
       success: false
     });
@@ -186,8 +186,8 @@ export async function getConversationWithIntents(conversationId: string) {
     const intentFlow = messageHistory
       .filter(m => m.metadata?.intent)
       .map(m => ({
-        intent: m.metadata.intent.type,
-        confidence: m.metadata.intent.confidence,
+        intent: m.metadata!.intent!,
+        confidence: m.metadata!.confidence || 0.5,
         timestamp: m.createdAt
       }));
 

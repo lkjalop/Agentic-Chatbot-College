@@ -4,13 +4,14 @@ import { AnalyticsService } from '@/lib/analytics/analytics-service';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const session = await getServerSession();
+    const resolvedParams = await params;
     
     // Check if user is authenticated and authorized
-    if (!session?.user?.id || session.user.id !== params.userId) {
+    if (!session?.user?.id || session.user.id !== resolvedParams.userId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
@@ -18,7 +19,7 @@ export async function GET(
     const days = parseInt(searchParams.get('days') || '30');
     
     const analyticsService = new AnalyticsService();
-    const analytics = await analyticsService.getUserAnalyticsDashboard(params.userId, days);
+    const analytics = await analyticsService.getUserAnalyticsDashboard(resolvedParams.userId, days);
     
     return Response.json(analytics);
   } catch (error) {

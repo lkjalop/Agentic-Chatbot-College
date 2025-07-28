@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { searchVectors, searchWithRelationships } from '@/lib/vector';
 import { db } from '@/lib/db';
 import { messages, conversations, auditLogs, syntheticDataMeta } from '@/lib/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
 const SearchInputSchema = z.object({
@@ -58,8 +58,8 @@ export async function searchAction(formData: FormData): Promise<SearchResponse> 
       resourceId: conversationId,
       metadata: {
         searchQuery: input.query,
-        searchType: input.searchType,
-        filters: input.filters
+        duration: 0,
+        resultCount: 0
       }
     });
 
@@ -68,8 +68,8 @@ export async function searchAction(formData: FormData): Promise<SearchResponse> 
       role: 'user',
       content: input.query,
       metadata: {
-        searchType: input.searchType,
-        filters: input.filters
+        intent: 'basic_search',
+        entities: ['search']
       }
     }).returning();
 
@@ -88,17 +88,17 @@ export async function searchAction(formData: FormData): Promise<SearchResponse> 
       });
     }
 
-    if (!searchResults.success || !searchResults.results) {
+    if (!searchResults.results) {
       throw new Error('Search failed');
     }
 
     const vectorIds = searchResults.results.map(r => r.id);
     await db.update(syntheticDataMeta)
       .set({ 
-        usageCount: db.sql`usage_count + 1`,
+        usageCount: sql`usage_count + 1`,
         lastAccessed: new Date()
       })
-      .where(db.sql`vector_id = ANY(${vectorIds})`);
+      .where(sql`vector_id = ANY(${vectorIds})`);
 
     const formattedResults = searchResults.results.map(result => ({
       id: result.id,
@@ -113,7 +113,7 @@ export async function searchAction(formData: FormData): Promise<SearchResponse> 
       content: `Found ${formattedResults.length} results for "${input.query}"`,
       metadata: {
         searchResults: formattedResults,
-        resultCount: formattedResults.length
+        intent: 'basic_search'
       }
     }).returning();
 
@@ -145,7 +145,7 @@ export async function searchAction(formData: FormData): Promise<SearchResponse> 
       resourceType: 'vector_search',
       metadata: {
         error: error instanceof Error ? error.message : 'Unknown error',
-        query: formData.get('query') as string
+        searchQuery: formData.get('query') as string
       },
       success: false
     });

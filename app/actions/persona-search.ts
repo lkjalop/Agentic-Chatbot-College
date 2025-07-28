@@ -48,9 +48,8 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
         userId: 'anonymous',
         title: input.query.slice(0, 100),
         metadata: { 
-          enhanced: true, 
-          personaAware: true,
-          personaDetectionEnabled: input.enablePersonaDetection
+          tags: ['enhanced', 'persona-aware'],
+          intent: 'persona_search'
         }
       }).returning();
       conversationId = conversation.id;
@@ -73,10 +72,9 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
       resourceType: 'persona_aware_router',
       resourceId: conversationId,
       metadata: {
-        query: input.query,
-        useMemory: input.useMemory,
-        memorySize: memoryContext.length,
-        personaDetectionEnabled: input.enablePersonaDetection
+        searchQuery: input.query,
+        duration: 0,
+        resultCount: 0
       }
     });
 
@@ -85,8 +83,8 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
       role: 'user',
       content: input.query,
       metadata: { 
-        personaAware: true,
-        personaDetectionEnabled: input.enablePersonaDetection
+        entities: ['persona-aware'],
+        intent: 'persona_search'
       }
     }).returning();
 
@@ -115,16 +113,10 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
       role: 'assistant',
       content: assistantContent,
       metadata: {
-        intent: routerResponse.intent,
-        resultCount: routerResponse.results.length,
-        searchStrategy: routerResponse.metadata.strategy,
-        processingTime: Date.now() - searchStart,
-        personaDetection: routerResponse.personaDetection ? {
-          personaName: routerResponse.personaDetection.persona?.archetypeName,
-          confidence: routerResponse.personaDetection.confidence,
-          journeyStage: routerResponse.personaDetection.journeyStage,
-          emotionalNeeds: routerResponse.personaDetection.emotionalNeeds
-        } : null
+        intent: routerResponse.intent.type,
+        entities: routerResponse.intent.entities,
+        searchResults: routerResponse.results.slice(0, 3),
+        confidence: routerResponse.intent.confidence
       }
     }).returning();
 
@@ -132,10 +124,9 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
       .set({ 
         updatedAt: new Date(),
         metadata: {
-          lastIntent: routerResponse.intent.type,
-          totalMessages: memoryContext.length + 2,
-          lastPersonaDetected: routerResponse.personaDetection?.persona?.archetypeName,
-          lastPersonaConfidence: routerResponse.personaDetection?.confidence
+          intent: routerResponse.intent.type,
+          tags: ['persona-aware'],
+          satisfaction: routerResponse.intent.confidence
         }
       })
       .where(eq(conversations.id, conversationId));
@@ -148,11 +139,7 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
       metadata: {
         duration: Date.now() - searchStart,
         resultCount: routerResponse.results.length,
-        intent: routerResponse.intent.type,
-        confidence: routerResponse.intent.confidence,
-        personaDetected: routerResponse.personaDetection?.persona?.archetypeName,
-        personaConfidence: routerResponse.personaDetection?.confidence,
-        emotionalSupport: routerResponse.personaDetection?.emotionalNeeds
+        searchQuery: input.query
       },
       success: true
     });
@@ -183,7 +170,7 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
       resourceType: 'persona_aware_router',
       metadata: {
         error: error instanceof Error ? error.message : 'Unknown error',
-        query: formData.get('query') as string
+        searchQuery: formData.get('query') as string
       },
       success: false
     });
