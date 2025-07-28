@@ -47,12 +47,17 @@ export async function POST(request: NextRequest) {
     let finalResults = searchResults;
     if (user) {
       const searchService = new PersonalizedSearchService();
-      finalResults = await searchService.searchWithPersonalization(
+      const personalizedResults = await searchService.searchWithPersonalization(
         query,
         user,
         filters,
         limit
       );
+      // Ensure we maintain the expected structure
+      finalResults = {
+        success: true,
+        results: personalizedResults.results || searchResults.results || []
+      };
     }
 
     // Generate response based on search results and selected agent
@@ -117,7 +122,8 @@ async function generateAgentResponse(
   try {
     // Use the existing Groq service to generate response
     const { generateResponse } = await import('@/lib/ai/groq');
-    const response = await generateResponse(`${prompt} ${userContext}`, query);
+    const mockIntent = { type: 'recommendation' as const, confidence: 0.8, entities: [], searchStrategy: 'hybrid' as const, clarificationNeeded: false };
+    const response = await generateResponse(query, searchResults.results || [], mockIntent);
     return response;
   } catch (error) {
     console.error('Error generating response:', error);

@@ -5,7 +5,7 @@ import { Providers } from './providers';
 
 const inter = Inter({ 
   subsets: ['latin'],
-  weights: ['400', '500', '600', '700'],
+  weight: ['400', '500', '600', '700'],
   display: 'swap'
 });
 

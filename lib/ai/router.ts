@@ -85,8 +85,8 @@ export class AgenticRouter {
 
       while (queue.length > 0) {
         const current = queue.shift()!;
-        if (visited.has(current.id)) continue;
-        visited.add(current.id);
+        if (visited.has(String(current.id))) continue;
+        visited.add(String(current.id));
 
         if (current.metadata?.prerequisites) {
           for (const prereq of current.metadata.prerequisites) {

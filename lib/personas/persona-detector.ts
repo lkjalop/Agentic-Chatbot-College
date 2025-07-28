@@ -11,7 +11,7 @@ interface DetectionSignals {
   urgency: string[];
 }
 
-interface PersonaDetectionResult {
+export interface PersonaDetectionResult {
   persona: any;
   confidence: number;
   signals: string[];
