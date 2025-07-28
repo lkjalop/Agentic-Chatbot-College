@@ -2,17 +2,30 @@ import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from './schema';
 
-if (!process.env.NEON_DATABASE_URL) {
-  throw new Error('NEON_DATABASE_URL is not defined');
+let dbInstance: ReturnType<typeof drizzle> | null = null;
+let sqlInstance: ReturnType<typeof neon> | null = null;
+
+export function getDb() {
+  if (!dbInstance) {
+    if (!process.env.NEON_DATABASE_URL) {
+      throw new Error('NEON_DATABASE_URL is not defined');
+    }
+    
+    sqlInstance = neon(process.env.NEON_DATABASE_URL);
+    dbInstance = drizzle(sqlInstance, { schema });
+  }
+  
+  return dbInstance;
 }
 
-const sql = neon(process.env.NEON_DATABASE_URL);
-export const db = drizzle(sql, { schema });
+// Export getDb as db for easy usage: db()
+export { getDb as db };
 export { schema };
 
 export async function checkDatabaseConnection() {
   try {
-    const result = await sql`SELECT 1 as check`;
+    getDb(); // Initialize if needed
+    const result = await sqlInstance!`SELECT 1 as check`;
     return { connected: true, result };
   } catch (error) {
     console.error('Database connection error:', error);
@@ -21,7 +34,7 @@ export async function checkDatabaseConnection() {
 }
 
 export async function withTransaction<T>(
-  callback: (tx: typeof db) => Promise<T>
+  callback: (tx: ReturnType<typeof getDb>) => Promise<T>
 ): Promise<T> {
-  return callback(db);
+  return callback(getDb());
 }

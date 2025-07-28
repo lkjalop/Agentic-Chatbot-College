@@ -44,14 +44,14 @@ export async function searchAction(formData: FormData): Promise<SearchResponse> 
 
     let conversationId = input.conversationId;
     if (!conversationId) {
-      const [conversation] = await db.insert(conversations).values({
+      const [conversation] = await db().insert(conversations).values({
         userId: 'anonymous',
         title: input.query.slice(0, 100)
       }).returning();
       conversationId = conversation.id;
     }
 
-    await db.insert(auditLogs).values({
+    await db().insert(auditLogs).values({
       userId: 'anonymous',
       action: 'search',
       resourceType: 'vector_search',
@@ -63,7 +63,7 @@ export async function searchAction(formData: FormData): Promise<SearchResponse> 
       }
     });
 
-    const [userMessage] = await db.insert(messages).values({
+    const [userMessage] = await db().insert(messages).values({
       conversationId,
       role: 'user',
       content: input.query,
@@ -93,7 +93,7 @@ export async function searchAction(formData: FormData): Promise<SearchResponse> 
     }
 
     const vectorIds = searchResults.results.map(r => r.id);
-    await db.update(syntheticDataMeta)
+    await db().update(syntheticDataMeta)
       .set({ 
         usageCount: sql`usage_count + 1`,
         lastAccessed: new Date()
@@ -107,7 +107,7 @@ export async function searchAction(formData: FormData): Promise<SearchResponse> 
       score: result.score || 0
     }));
 
-    const [assistantMessage] = await db.insert(messages).values({
+    const [assistantMessage] = await db().insert(messages).values({
       conversationId,
       role: 'assistant',
       content: `Found ${formattedResults.length} results for "${input.query}"`,
@@ -117,7 +117,7 @@ export async function searchAction(formData: FormData): Promise<SearchResponse> 
       }
     }).returning();
 
-    await db.insert(auditLogs).values({
+    await db().insert(auditLogs).values({
       userId: 'anonymous',
       action: 'search_complete',
       resourceType: 'vector_search',
@@ -139,7 +139,7 @@ export async function searchAction(formData: FormData): Promise<SearchResponse> 
   } catch (error) {
     console.error('Search error:', error);
     
-    await db.insert(auditLogs).values({
+    await db().insert(auditLogs).values({
       userId: 'anonymous',
       action: 'search_error',
       resourceType: 'vector_search',
@@ -160,7 +160,7 @@ export async function searchAction(formData: FormData): Promise<SearchResponse> 
 
 export async function getConversationHistory(conversationId: string) {
   try {
-    const conversation = await db.query.conversations.findFirst({
+    const conversation = await db().query.conversations.findFirst({
       where: eq(conversations.id, conversationId)
     });
 
@@ -168,7 +168,7 @@ export async function getConversationHistory(conversationId: string) {
       return { success: false, error: 'Conversation not found' };
     }
 
-    const messageHistory = await db.query.messages.findMany({
+    const messageHistory = await db().query.messages.findMany({
       where: eq(messages.conversationId, conversationId),
       orderBy: [messages.createdAt]
     });
@@ -186,7 +186,7 @@ export async function getConversationHistory(conversationId: string) {
 
 export async function getRecentConversations(userId: string = 'anonymous', limit: number = 10) {
   try {
-    const recentConversations = await db.query.conversations.findMany({
+    const recentConversations = await db().query.conversations.findMany({
       where: eq(conversations.userId, userId),
       orderBy: [desc(conversations.updatedAt)],
       limit

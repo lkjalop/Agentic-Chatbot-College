@@ -17,7 +17,7 @@ export async function PUT(request: NextRequest) {
     const { analyticsConsent, marketingConsent } = body;
     
     // Update user privacy settings
-    await db.update(users)
+    await db().update(users)
       .set({
         analyticsConsent: analyticsConsent ?? undefined,
         marketingConsent: marketingConsent ?? undefined,

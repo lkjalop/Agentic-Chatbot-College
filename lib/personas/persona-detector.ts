@@ -152,7 +152,7 @@ export class PersonaDetector {
   private async findPersonaCandidates(signals: string[]): Promise<any[]> {
     try {
       // Get all personas for now - in production, you'd optimize this
-      const allPersonas = await db.select().from(studentPersonas);
+      const allPersonas = await db().select().from(studentPersonas);
       return allPersonas;
     } catch (error) {
       console.error('Error fetching persona candidates:', error);
@@ -285,7 +285,7 @@ export class PersonaDetector {
   private async getDefaultPersona(): Promise<any> {
     try {
       // Try to get a general international student persona
-      const defaultPersona = await db.select()
+      const defaultPersona = await db().select()
         .from(studentPersonas)
         .where(eq(studentPersonas.archetypeCode, 'general_international'))
         .limit(1);

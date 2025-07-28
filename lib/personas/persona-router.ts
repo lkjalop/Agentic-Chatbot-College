@@ -272,7 +272,7 @@ export class PersonaAwareRouter {
     detection: PersonaDetectionResult
   ): Promise<void> {
     try {
-      await db.insert(personaConversations).values({
+      await db().insert(personaConversations).values({
         originalConversationId: conversationId,
         detectedPersonaId: detection.persona?.id,
         detectionConfidence: detection.confidence,

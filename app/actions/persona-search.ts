@@ -44,7 +44,7 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
 
     let conversationId = input.conversationId;
     if (!conversationId) {
-      const [conversation] = await db.insert(conversations).values({
+      const [conversation] = await db().insert(conversations).values({
         userId: 'anonymous',
         title: input.query.slice(0, 100),
         metadata: { 
@@ -57,7 +57,7 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
 
     let memoryContext: any[] = [];
     if (input.useMemory && conversationId) {
-      const recentMessages = await db.query.messages.findMany({
+      const recentMessages = await db().query.messages.findMany({
         where: eq(messages.conversationId, conversationId),
         orderBy: (messages, { desc }) => [desc(messages.createdAt)],
         limit: 10
@@ -66,7 +66,7 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
     }
 
     const searchStart = Date.now();
-    await db.insert(auditLogs).values({
+    await db().insert(auditLogs).values({
       userId: 'anonymous',
       action: 'persona_search',
       resourceType: 'persona_aware_router',
@@ -78,7 +78,7 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
       }
     });
 
-    const [userMessage] = await db.insert(messages).values({
+    const [userMessage] = await db().insert(messages).values({
       conversationId,
       role: 'user',
       content: input.query,
@@ -108,7 +108,7 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
     const assistantContent = routerResponse.summary || 
       `Found ${routerResponse.results.length} results using ${routerResponse.intent.searchStrategy} search strategy.`;
 
-    const [assistantMessage] = await db.insert(messages).values({
+    const [assistantMessage] = await db().insert(messages).values({
       conversationId,
       role: 'assistant',
       content: assistantContent,
@@ -120,7 +120,7 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
       }
     }).returning();
 
-    await db.update(conversations)
+    await db().update(conversations)
       .set({ 
         updatedAt: new Date(),
         metadata: {
@@ -131,7 +131,7 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
       })
       .where(eq(conversations.id, conversationId));
 
-    await db.insert(auditLogs).values({
+    await db().insert(auditLogs).values({
       userId: 'anonymous',
       action: 'persona_search_complete',
       resourceType: 'persona_aware_router',
@@ -164,7 +164,7 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
   } catch (error) {
     console.error('Persona search error:', error);
     
-    await db.insert(auditLogs).values({
+    await db().insert(auditLogs).values({
       userId: 'anonymous',
       action: 'persona_search_error',
       resourceType: 'persona_aware_router',

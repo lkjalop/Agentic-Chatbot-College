@@ -25,7 +25,7 @@ export class AnalyticsService {
     
     const sessionToken = nanoid(32);
     
-    const [session] = await db.insert(userSessions).values({
+    const [session] = await db().insert(userSessions).values({
       userId,
       sessionToken,
       userAgent: userAgent?.substring(0, 500),
@@ -61,7 +61,7 @@ export class AnalyticsService {
       formalityLevel?: string;
     }
   ) {
-    const [analytics] = await db.insert(conversationAnalytics).values({
+    const [analytics] = await db().insert(conversationAnalytics).values({
       conversationId,
       sessionId,
       userId,
@@ -86,7 +86,7 @@ export class AnalyticsService {
     feedbackType: 'helpful' | 'not_helpful' | 'needs_improvement',
     followUpQuestion?: string
   ) {
-    await db.update(conversationAnalytics)
+    await db().update(conversationAnalytics)
       .set({
         userSatisfaction: satisfaction,
         feedbackType,
@@ -95,7 +95,7 @@ export class AnalyticsService {
       .where(eq(conversationAnalytics.id, conversationAnalyticsId));
     
     // Get the agent name to update metrics
-    const [analytics] = await db.select()
+    const [analytics] = await db().select()
       .from(conversationAnalytics)
       .where(eq(conversationAnalytics.id, conversationAnalyticsId));
     
@@ -113,7 +113,7 @@ export class AnalyticsService {
     sinceDate.setDate(sinceDate.getDate() - days);
     
     // Get user's conversation history
-    const conversations = await db.select()
+    const conversations = await db().select()
       .from(conversationAnalytics)
       .where(
         and(
@@ -129,7 +129,7 @@ export class AnalyticsService {
     const queryCategories = this.categorizeUserQueries(conversations);
     
     // Get user data
-    const [user] = await db.select()
+    const [user] = await db().select()
       .from(users)
       .where(eq(users.id, userId));
     
@@ -153,18 +153,18 @@ export class AnalyticsService {
     sinceDate.setDate(sinceDate.getDate() - days);
     
     // Overall metrics
-    const [userStats] = await db.select({
+    const [userStats] = await db().select({
       totalUsers: sql<number>`count(*)`,
       activeUsers: sql<number>`count(*) filter (where ${users.lastLogin} >= ${sinceDate})`
     }).from(users);
     
-    const [conversationStats] = await db.select({
+    const [conversationStats] = await db().select({
       totalConversations: sql<number>`count(*)`
     }).from(conversationAnalytics)
       .where(gte(conversationAnalytics.createdAt, sinceDate));
     
     // Agent performance
-    const agentMetrics = await db.select()
+    const agentMetrics = await db().select()
       .from(agentPerformanceMetrics)
       .where(gte(agentPerformanceMetrics.date, sinceDate));
     
@@ -205,7 +205,7 @@ export class AnalyticsService {
     today.setHours(0, 0, 0, 0);
     const hour = new Date().getHours();
     
-    const [existing] = await db.select()
+    const [existing] = await db().select()
       .from(agentPerformanceMetrics)
       .where(
         and(
@@ -220,7 +220,7 @@ export class AnalyticsService {
       const totalQueries = (existing.totalQueries || 0) + 1;
       const successfulQueries = (existing.successfulQueries || 0) + (confidence > 0.7 ? 1 : 0);
       
-      await db.update(agentPerformanceMetrics)
+      await db().update(agentPerformanceMetrics)
         .set({
           totalQueries,
           successfulQueries,
@@ -235,7 +235,7 @@ export class AnalyticsService {
         .where(eq(agentPerformanceMetrics.id, existing.id));
     } else {
       // Create new metrics
-      await db.insert(agentPerformanceMetrics).values({
+      await db().insert(agentPerformanceMetrics).values({
         agentName,
         date: new Date(),
         hour,
@@ -257,7 +257,7 @@ export class AnalyticsService {
     today.setHours(0, 0, 0, 0);
     const hour = new Date().getHours();
     
-    const [existing] = await db.select()
+    const [existing] = await db().select()
       .from(agentPerformanceMetrics)
       .where(
         and(
@@ -274,7 +274,7 @@ export class AnalyticsService {
       const negativeFeedback = (existing.negativeFeedback || 0) + 
         (feedbackType === 'not_helpful' ? 1 : 0);
       
-      await db.update(agentPerformanceMetrics)
+      await db().update(agentPerformanceMetrics)
         .set({
           totalFeedbackReceived: totalFeedback,
           positiveFeedback,
@@ -409,7 +409,7 @@ export class AnalyticsService {
   
   private async calculateSatisfactionTrends(sinceDate: Date) {
     // Group satisfaction scores by day
-    const trends = await db.select({
+    const trends = await db().select({
       date: sql`date_trunc('day', ${conversationAnalytics.createdAt})`,
       avgSatisfaction: sql<number>`avg(${conversationAnalytics.userSatisfaction})`
     })
@@ -427,7 +427,7 @@ export class AnalyticsService {
   }
   
   private async getCommonQueryPatterns(sinceDate: Date) {
-    const patterns = await db.select({
+    const patterns = await db().select({
       queryIntent: conversationAnalytics.queryIntent,
       count: sql<number>`count(*)`
     })

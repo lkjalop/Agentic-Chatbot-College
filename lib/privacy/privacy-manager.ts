@@ -76,26 +76,26 @@ export class PrivacyManager {
   
   static async exportUserData(userId: string) {
     // Get user data
-    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    const [user] = await db().select().from(users).where(eq(users.id, userId));
     if (!user) return null;
     
     // Get conversations
-    const conversations = await db.select()
+    const conversations = await db().select()
       .from(conversationAnalytics)
       .where(eq(conversationAnalytics.userId, userId));
     
     // Get sessions
-    const sessions = await db.select()
+    const sessions = await db().select()
       .from(userSessions)
       .where(eq(userSessions.userId, userId));
     
     // Get feedback
-    const feedback = await db.select()
+    const feedback = await db().select()
       .from(queryFeedback)
       .where(eq(queryFeedback.userId, userId));
     
     // Get recommendations
-    const recommendations = await db.select()
+    const recommendations = await db().select()
       .from(queryRecommendations)
       .where(eq(queryRecommendations.userId, userId));
     
@@ -143,19 +143,19 @@ export class PrivacyManager {
   static async deleteUserData(userId: string): Promise<boolean> {
     try {
       // Delete in reverse dependency order
-      await db.delete(queryRecommendations)
+      await db().delete(queryRecommendations)
         .where(eq(queryRecommendations.userId, userId));
       
-      await db.delete(queryFeedback)
+      await db().delete(queryFeedback)
         .where(eq(queryFeedback.userId, userId));
       
-      await db.delete(conversationAnalytics)
+      await db().delete(conversationAnalytics)
         .where(eq(conversationAnalytics.userId, userId));
       
-      await db.delete(userSessions)
+      await db().delete(userSessions)
         .where(eq(userSessions.userId, userId));
       
-      await db.delete(users)
+      await db().delete(users)
         .where(eq(users.id, userId));
       
       return true;

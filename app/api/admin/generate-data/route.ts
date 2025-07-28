@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
     }));
 
     // Insert metadata records with conflict resolution
-    await db.insert(syntheticDataMeta).values(metadataRecords).onConflictDoUpdate({
+    await db().insert(syntheticDataMeta).values(metadataRecords).onConflictDoUpdate({
       target: syntheticDataMeta.vectorId,
       set: {
         title: syntheticDataMeta.title,

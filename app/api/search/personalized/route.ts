@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     
     // Get user data if authenticated
     if (session?.user?.id) {
-      const [userData] = await db.select()
+      const [userData] = await db().select()
         .from(users)
         .where(eq(users.id, session.user.id));
       user = userData;
@@ -198,7 +198,7 @@ export async function PUT(request: NextRequest) {
     }
     
     // Get user data
-    const [user] = await db.select()
+    const [user] = await db().select()
       .from(users)
       .where(eq(users.id, session.user.id));
     

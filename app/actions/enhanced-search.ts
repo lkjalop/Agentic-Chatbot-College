@@ -36,7 +36,7 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
 
     let conversationId = input.conversationId;
     if (!conversationId) {
-      const [conversation] = await db.insert(conversations).values({
+      const [conversation] = await db().insert(conversations).values({
         userId: 'anonymous',
         title: input.query.slice(0, 100),
         metadata: { tags: ['enhanced'] }
@@ -46,7 +46,7 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
 
     let memoryContext: any[] = [];
     if (input.useMemory && conversationId) {
-      const recentMessages = await db.query.messages.findMany({
+      const recentMessages = await db().query.messages.findMany({
         where: eq(messages.conversationId, conversationId),
         orderBy: (messages, { desc }) => [desc(messages.createdAt)],
         limit: 10
@@ -55,7 +55,7 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
     }
 
     const searchStart = Date.now();
-    await db.insert(auditLogs).values({
+    await db().insert(auditLogs).values({
       userId: 'anonymous',
       action: 'enhanced_search',
       resourceType: 'agentic_router',
@@ -67,7 +67,7 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
       }
     });
 
-    const [userMessage] = await db.insert(messages).values({
+    const [userMessage] = await db().insert(messages).values({
       conversationId,
       role: 'user',
       content: input.query,
@@ -100,7 +100,7 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
       );
     }
 
-    const [assistantMessage] = await db.insert(messages).values({
+    const [assistantMessage] = await db().insert(messages).values({
       conversationId,
       role: 'assistant',
       content: summary || `Found ${routerResponse.results.length} results using ${routerResponse.intent.searchStrategy} search strategy.`,
@@ -112,7 +112,7 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
       }
     }).returning();
 
-    await db.update(conversations)
+    await db().update(conversations)
       .set({ 
         updatedAt: new Date(),
         metadata: {
@@ -123,7 +123,7 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
       })
       .where(eq(conversations.id, conversationId));
 
-    await db.insert(auditLogs).values({
+    await db().insert(auditLogs).values({
       userId: 'anonymous',
       action: 'enhanced_search_complete',
       resourceType: 'agentic_router',
@@ -149,7 +149,7 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
   } catch (error) {
     console.error('Enhanced search error:', error);
     
-    await db.insert(auditLogs).values({
+    await db().insert(auditLogs).values({
       userId: 'anonymous',
       action: 'enhanced_search_error',
       resourceType: 'agentic_router',
@@ -170,7 +170,7 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
 
 export async function getConversationWithIntents(conversationId: string) {
   try {
-    const conversation = await db.query.conversations.findFirst({
+    const conversation = await db().query.conversations.findFirst({
       where: eq(conversations.id, conversationId)
     });
 
@@ -178,7 +178,7 @@ export async function getConversationWithIntents(conversationId: string) {
       return { success: false, error: 'Conversation not found' };
     }
 
-    const messageHistory = await db.query.messages.findMany({
+    const messageHistory = await db().query.messages.findMany({
       where: eq(messages.conversationId, conversationId),
       orderBy: (messages, { asc }) => [asc(messages.createdAt)]
     });

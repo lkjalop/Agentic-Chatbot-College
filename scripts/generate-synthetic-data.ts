@@ -233,7 +233,7 @@ export async function generateSyntheticData() {
     }));
 
     // Insert metadata records
-    await db.insert(syntheticDataMeta).values(metadataRecords).onConflictDoUpdate({
+    await db().insert(syntheticDataMeta).values(metadataRecords).onConflictDoUpdate({
       target: syntheticDataMeta.vectorId,
       set: {
         title: syntheticDataMeta.title,

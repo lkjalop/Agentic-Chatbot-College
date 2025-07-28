@@ -109,7 +109,7 @@ export class PersonalizedSearchService {
     // Get the full query data if we have an ID
     let queryData: StudentQuery | null = null;
     if (result.metadata?.queryId) {
-      const [data] = await db.select()
+      const [data] = await db().select()
         .from(studentQueries)
         .where(eq(studentQueries.id, result.metadata.queryId));
       queryData = data;
@@ -159,7 +159,7 @@ export class PersonalizedSearchService {
     limit: number = 5
   ) {
     // Get existing unshown recommendations
-    const existingRecs = await db.select()
+    const existingRecs = await db().select()
       .from(queryRecommendations)
       .where(
         and(
@@ -177,7 +177,7 @@ export class PersonalizedSearchService {
     await this.generateRecommendationsForUser(user);
     
     // Get updated recommendations
-    const recommendations = await db.select()
+    const recommendations = await db().select()
       .from(queryRecommendations)
       .innerJoin(
         studentQueries,
@@ -196,7 +196,7 @@ export class PersonalizedSearchService {
   
   private async generateRecommendationsForUser(user: User) {
     // Get user's conversation history
-    const conversations = await db.select()
+    const conversations = await db().select()
       .from(conversationAnalytics)
       .where(eq(conversationAnalytics.userId, user.id))
       .orderBy(desc(conversationAnalytics.createdAt))
@@ -251,7 +251,7 @@ export class PersonalizedSearchService {
     
     // Save unique recommendations only
     for (const recData of recommendationsToCreate) {
-      const [existing] = await db.select()
+      const [existing] = await db().select()
         .from(queryRecommendations)
         .where(
           and(
@@ -261,7 +261,7 @@ export class PersonalizedSearchService {
         );
       
       if (!existing) {
-        await db.insert(queryRecommendations).values(recData);
+        await db().insert(queryRecommendations).values(recData);
       }
     }
   }
@@ -285,14 +285,14 @@ export class PersonalizedSearchService {
     }
     
     if (Object.keys(updates).length > 0) {
-      await db.update(studentQueries)
+      await db().update(studentQueries)
         .set(updates)
         .where(eq(studentQueries.id, queryId));
     }
     
     // Record detailed feedback if user provided it
     if (user && interactionType in ['helpful', 'not_helpful']) {
-      await db.insert(queryFeedback).values({
+      await db().insert(queryFeedback).values({
         queryId,
         userId: user.id,
         isHelpful: interactionType === 'helpful',
@@ -304,7 +304,7 @@ export class PersonalizedSearchService {
     
     // Update recommendation tracking if this was a recommendation
     if (user && interactionType === 'click') {
-      await db.update(queryRecommendations)
+      await db().update(queryRecommendations)
         .set({
           clickedByUser: true,
           clickedAt: new Date()
@@ -321,7 +321,7 @@ export class PersonalizedSearchService {
   }
   
   private async findSimilarUsers(user: User): Promise<User[]> {
-    return await db.select()
+    return await db().select()
       .from(users)
       .where(
         and(
@@ -338,7 +338,7 @@ export class PersonalizedSearchService {
     
     const userIds = similarUsers.map(u => u.id);
     
-    const popularQueries = await db.select({
+    const popularQueries = await db().select({
       query: studentQueries,
       helpfulCount: sql<number>`count(${queryFeedback.id})`
     })
@@ -377,7 +377,7 @@ export class PersonalizedSearchService {
     
     const categories = stageQueryMap[journeyStage] || ['course_info' as const];
     
-    return await db.select()
+    return await db().select()
       .from(studentQueries)
       .where(
         and(
@@ -401,7 +401,7 @@ export class PersonalizedSearchService {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     
-    return await db.select()
+    return await db().select()
       .from(studentQueries)
       .where(
         and(
@@ -424,7 +424,7 @@ export class PersonalizedSearchService {
   
   private async getUserJourneyStage(user: User): Promise<string> {
     // Get recent conversations
-    const recentConversations = await db.select()
+    const recentConversations = await db().select()
       .from(conversationAnalytics)
       .where(eq(conversationAnalytics.userId, user.id))
       .orderBy(desc(conversationAnalytics.createdAt))
@@ -457,7 +457,7 @@ export class PersonalizedSearchService {
     
     const userIds = similarUsers.slice(0, 20).map(u => u.id);
     
-    const [result] = await db.select({
+    const [result] = await db().select({
       helpfulCount: sql<number>`count(*)`
     })
     .from(queryFeedback)
@@ -473,7 +473,7 @@ export class PersonalizedSearchService {
   }
   
   private async getUserSearchHistory(userId: string) {
-    return await db.select()
+    return await db().select()
       .from(conversationAnalytics)
       .where(eq(conversationAnalytics.userId, userId))
       .orderBy(desc(conversationAnalytics.createdAt))

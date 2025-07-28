@@ -30,7 +30,7 @@ const handler = NextAuth({
         session.user.id = token.sub!;
         
         // Fetch additional user data
-        const userData = await db.query.users.findFirst({
+        const userData = await db().query.users.findFirst({
           where: eq(users.id, token.sub!)
         });
         
@@ -60,13 +60,13 @@ const handler = NextAuth({
       if (account?.provider === "google") {
         try {
           // Check if user exists
-          const existingUser = await db.query.users.findFirst({
+          const existingUser = await db().query.users.findFirst({
             where: eq(users.email, user.email!)
           });
           
           if (!existingUser) {
             // Create new user with default values
-            await db.insert(users).values({
+            await db().insert(users).values({
               email: user.email!,
               name: user.name || "Unknown User",
               googleId: account.providerAccountId,
@@ -78,7 +78,7 @@ const handler = NextAuth({
             });
           } else {
             // Update last login
-            await db.update(users)
+            await db().update(users)
               .set({ 
                 lastLogin: new Date(),
                 loginCount: (existingUser.loginCount || 0) + 1,

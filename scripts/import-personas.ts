@@ -233,7 +233,7 @@ export async function importPersonaData() {
     const insertedPersonas = [];
     
     for (const { persona } of personaData) {
-      const [insertedPersona] = await db.insert(studentPersonas)
+      const [insertedPersona] = await db().insert(studentPersonas)
         .values(persona)
         .onConflictDoUpdate({
           target: studentPersonas.archetypeCode,
@@ -264,7 +264,7 @@ export async function importPersonaData() {
           ? question.journeyStage as typeof validStages[number]
           : 'awareness';
         
-        const [insertedQuestion] = await db.insert(personaJourneyQuestions)
+        const [insertedQuestion] = await db().insert(personaJourneyQuestions)
           .values({
             ...question,
             journeyStage,
@@ -325,7 +325,7 @@ export async function importPersonaData() {
       const persona = insertedPersonas.find(p => p.archetypeCode === patternData.personaCode);
       
       if (persona) {
-        await db.insert(responsePatterns)
+        await db().insert(responsePatterns)
           .values({
             personaId: persona.id,
             triggerPhrases: patternData.patterns.triggerPhrases,

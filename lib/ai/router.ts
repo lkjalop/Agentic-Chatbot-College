@@ -224,7 +224,7 @@ export class AgenticRouter {
 
   private async fetchByVectorId(vectorId: string) {
     try {
-      const dbResult = await db.query.syntheticDataMeta.findFirst({
+      const dbResult = await db().query.syntheticDataMeta.findFirst({
         where: eq(syntheticDataMeta.vectorId, vectorId)
       });
 
