@@ -1,14 +1,22 @@
 import { Index } from '@upstash/vector';
 import { z } from 'zod';
 
-if (!process.env.UPSTASH_VECTOR_REST_URL || !process.env.UPSTASH_VECTOR_REST_TOKEN) {
-  throw new Error('Upstash Vector environment variables are not defined');
-}
+let vectorIndex: Index | null = null;
 
-export const vectorIndex = new Index({
-  url: process.env.UPSTASH_VECTOR_REST_URL,
-  token: process.env.UPSTASH_VECTOR_REST_TOKEN,
-});
+export function getVectorIndex(): Index {
+  if (!vectorIndex) {
+    if (!process.env.UPSTASH_VECTOR_REST_URL || !process.env.UPSTASH_VECTOR_REST_TOKEN) {
+      throw new Error('Upstash Vector environment variables are not defined');
+    }
+    
+    vectorIndex = new Index({
+      url: process.env.UPSTASH_VECTOR_REST_URL,
+      token: process.env.UPSTASH_VECTOR_REST_TOKEN,
+    });
+  }
+  
+  return vectorIndex;
+}
 
 export const VectorMetadataSchema = z.object({
   id: z.string(),
@@ -35,7 +43,7 @@ export async function upsertVector(data: {
   metadata: VectorMetadata;
 }) {
   try {
-    const result = await vectorIndex.upsert({
+    const result = await getVectorIndex().upsert({
       id: data.id,
       data: data.content,
       metadata: data.metadata
@@ -64,7 +72,7 @@ export async function batchUpsertVectors(items: Array<{
     
     for (let i = 0; i < vectors.length; i += batchSize) {
       const batch = vectors.slice(i, i + batchSize);
-      const result = await vectorIndex.upsert(batch);
+      const result = await getVectorIndex().upsert(batch);
       results.push(result);
     }
     
@@ -102,7 +110,7 @@ export async function searchVectors({
       queryOptions.filter = filterString;
     }
     
-    const results = await vectorIndex.query(queryOptions);
+    const results = await getVectorIndex().query(queryOptions);
     
     return { success: true, results };
   } catch (error) {
@@ -113,7 +121,7 @@ export async function searchVectors({
 
 export async function deleteVector(id: string) {
   try {
-    const result = await vectorIndex.delete(id);
+    const result = await getVectorIndex().delete(id);
     return { success: true, result };
   } catch (error) {
     console.error('Error deleting vector:', error);
@@ -123,7 +131,7 @@ export async function deleteVector(id: string) {
 
 export async function getVectorStats() {
   try {
-    const info = await vectorIndex.info();
+    const info = await getVectorIndex().info();
     return { success: true, info };
   } catch (error) {
     console.error('Error getting vector stats:', error);
@@ -168,7 +176,7 @@ export async function searchWithRelationships({
       
       for (const relatedId of related) {
         if (!visited.has(String(relatedId))) {
-          const relatedResult = await vectorIndex.fetch([relatedId], {
+          const relatedResult = await getVectorIndex().fetch([relatedId], {
             includeMetadata: true
           });
           

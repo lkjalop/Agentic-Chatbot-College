@@ -1,12 +1,12 @@
 import { NextRequest } from 'next/server';
-import { vectorIndex } from '@/lib/vector';
+import { getVectorIndex } from '@/lib/vector';
 
 export async function POST(request: NextRequest) {
   try {
     const { query } = await request.json();
     
     // Try direct vector index query
-    const results = await vectorIndex.query({
+    const results = await getVectorIndex().query({
       data: query || "business analyst career switch",
       topK: 5,
       includeMetadata: true,
