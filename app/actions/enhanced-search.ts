@@ -47,8 +47,8 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
     let memoryContext: any[] = [];
     if (input.useMemory && conversationId) {
       const recentMessages = await db().query.messages.findMany({
-        where: eq(messages.conversationId, conversationId),
-        orderBy: (messages, { desc }) => [desc(messages.createdAt)],
+        where: eq(messages.conversationId, conversationId!),
+        orderBy: (messages: any, { desc }: any) => [desc(messages.createdAt)],
         limit: 10
       });
       memoryContext = recentMessages.reverse();
@@ -121,7 +121,7 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
           satisfaction: routerResponse.intent.confidence
         }
       })
-      .where(eq(conversations.id, conversationId));
+      .where(eq(conversations.id, conversationId!));
 
     await db().insert(auditLogs).values({
       userId: 'anonymous',
@@ -171,7 +171,7 @@ export async function enhancedSearchAction(formData: FormData): Promise<Enhanced
 export async function getConversationWithIntents(conversationId: string) {
   try {
     const conversation = await db().query.conversations.findFirst({
-      where: eq(conversations.id, conversationId)
+      where: eq(conversations.id, conversationId!)
     });
 
     if (!conversation) {
@@ -179,13 +179,13 @@ export async function getConversationWithIntents(conversationId: string) {
     }
 
     const messageHistory = await db().query.messages.findMany({
-      where: eq(messages.conversationId, conversationId),
-      orderBy: (messages, { asc }) => [asc(messages.createdAt)]
+      where: eq(messages.conversationId, conversationId!),
+      orderBy: (messages: any, { asc }: any) => [asc(messages.createdAt)]
     });
 
     const intentFlow = messageHistory
-      .filter(m => m.metadata?.intent)
-      .map(m => ({
+      .filter((m: any) => m.metadata?.intent)
+      .map((m: any) => ({
         intent: m.metadata!.intent!,
         confidence: m.metadata!.confidence || 0.5,
         timestamp: m.createdAt

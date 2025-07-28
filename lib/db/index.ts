@@ -2,8 +2,8 @@ import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from './schema';
 
-let dbInstance: ReturnType<typeof drizzle> | null = null;
-let sqlInstance: ReturnType<typeof neon> | null = null;
+let dbInstance: any = null;
+let sqlInstance: any = null;
 
 export function getDb() {
   if (!dbInstance) {

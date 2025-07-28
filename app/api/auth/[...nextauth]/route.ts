@@ -6,7 +6,7 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 const handler = NextAuth({
-  adapter: DrizzleAdapter(db),
+  adapter: DrizzleAdapter(db()),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,

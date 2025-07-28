@@ -58,8 +58,8 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
     let memoryContext: any[] = [];
     if (input.useMemory && conversationId) {
       const recentMessages = await db().query.messages.findMany({
-        where: eq(messages.conversationId, conversationId),
-        orderBy: (messages, { desc }) => [desc(messages.createdAt)],
+        where: eq(eq(messages.conversationId, conversationId), conversationId!),
+        orderBy: (messages: any, { desc }: any) => [desc(messages.createdAt)],
         limit: 10
       });
       memoryContext = recentMessages.reverse();
@@ -129,7 +129,7 @@ export async function personaSearchAction(formData: FormData): Promise<PersonaSe
           satisfaction: routerResponse.intent.confidence
         }
       })
-      .where(eq(conversations.id, conversationId));
+      .where(eq(eq(conversations.id, conversationId), conversationId!));
 
     await db().insert(auditLogs).values({
       userId: 'anonymous',

@@ -161,7 +161,7 @@ export async function searchAction(formData: FormData): Promise<SearchResponse> 
 export async function getConversationHistory(conversationId: string) {
   try {
     const conversation = await db().query.conversations.findFirst({
-      where: eq(conversations.id, conversationId)
+      where: eq(eq(conversations.id, conversationId), conversationId!)
     });
 
     if (!conversation) {
@@ -169,7 +169,7 @@ export async function getConversationHistory(conversationId: string) {
     }
 
     const messageHistory = await db().query.messages.findMany({
-      where: eq(messages.conversationId, conversationId),
+      where: eq(eq(messages.conversationId, conversationId), conversationId!),
       orderBy: [messages.createdAt]
     });
 
