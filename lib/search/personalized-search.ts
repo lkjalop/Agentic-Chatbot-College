@@ -368,14 +368,14 @@ export class PersonalizedSearchService {
     journeyStage: string,
     user: User
   ): Promise<StudentQuery[]> {
-    const stageQueryMap: Record<string, string[]> = {
+    const stageQueryMap: Record<string, Array<'course_info' | 'visa' | 'career' | 'prerequisites' | 'general'>> = {
       'exploring': ['course_info', 'career'],
       'visa_planning': ['visa'],
       'course_selection': ['prerequisites', 'course_info'],
       'engaged_learner': ['career', 'general']
     };
     
-    const categories = stageQueryMap[journeyStage] || ['course_info'];
+    const categories = stageQueryMap[journeyStage] || ['course_info' as const];
     
     return await db.select()
       .from(studentQueries)
@@ -383,7 +383,7 @@ export class PersonalizedSearchService {
         and(
           inArray(studentQueries.category, categories),
           or(
-            eq(studentQueries.studentType, user.studentType || 'all'),
+            eq(studentQueries.studentType, (user.studentType === 'unknown' ? 'all' : user.studentType) || 'all'),
             eq(studentQueries.studentType, 'all')
           ),
           eq(studentQueries.isPublic, true),
@@ -406,11 +406,11 @@ export class PersonalizedSearchService {
       .where(
         and(
           or(
-            eq(studentQueries.courseType, courseInterest),
+            eq(studentQueries.courseType, courseInterest === 'none' ? 'all' : courseInterest as 'data_analyst' | 'full_stack' | 'cybersecurity' | 'business_analyst' | 'all'),
             eq(studentQueries.courseType, 'all')
           ),
           or(
-            eq(studentQueries.studentType, studentType),
+            eq(studentQueries.studentType, studentType === 'unknown' ? 'all' : studentType as 'local' | 'international' | 'career_changer' | 'all'),
             eq(studentQueries.studentType, 'all')
           ),
           gte(studentQueries.lastAccessed, weekAgo),

@@ -139,7 +139,7 @@ export class PersonaDetector {
     const signals: string[] = [];
     
     Object.entries(this.detectionPatterns).forEach(([category, patterns]) => {
-      patterns.forEach(pattern => {
+      patterns.forEach((pattern: string) => {
         if (text.includes(pattern.toLowerCase())) {
           signals.push(`${category}:${pattern}`);
         }

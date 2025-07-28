@@ -88,7 +88,7 @@ export class AgenticRouter {
         if (visited.has(String(current.id))) continue;
         visited.add(String(current.id));
 
-        if (current.metadata?.prerequisites) {
+        if (current.metadata?.prerequisites && Array.isArray(current.metadata.prerequisites)) {
           for (const prereq of current.metadata.prerequisites) {
             prerequisites.add(prereq);
             
@@ -139,7 +139,7 @@ export class AgenticRouter {
 
     const skills = new Set<string>();
     careerResults.results.forEach(r => {
-      if (r.metadata?.prerequisites) {
+      if (r.metadata?.prerequisites && Array.isArray(r.metadata.prerequisites)) {
         r.metadata.prerequisites.forEach((p: string) => skills.add(p));
       }
     });

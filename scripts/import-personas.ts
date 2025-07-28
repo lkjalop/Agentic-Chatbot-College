@@ -237,10 +237,7 @@ export async function importPersonaData() {
         .values(persona)
         .onConflictDoUpdate({
           target: studentPersonas.archetypeCode,
-          set: {
-            ...persona,
-            updatedAt: new Date()
-          }
+          set: persona
         })
         .returning();
       
@@ -258,9 +255,19 @@ export async function importPersonaData() {
       
       for (const question of questions) {
         // Insert question to database
+        // Validate journey stage
+        const validStages = ['awareness', 'research', 'pre_consultation', 'consultation', 
+                           'decision', 'onboarding', 'bootcamp_start', 'engagement', 
+                           'delivery', 'post_completion'] as const;
+        
+        const journeyStage = validStages.includes(question.journeyStage as any) 
+          ? question.journeyStage as typeof validStages[number]
+          : 'awareness';
+        
         const [insertedQuestion] = await db.insert(personaJourneyQuestions)
           .values({
             ...question,
+            journeyStage,
             personaId
           })
           .onConflictDoNothing()
@@ -277,8 +284,8 @@ export async function importPersonaData() {
               title: `${insertedPersonas[i].archetypeName} - ${question.journeyStage}`,
               content: question.answer,
               category: 'Persona Journey',
-              contentType: 'persona_qa',
-              difficulty: 'contextual',
+              contentType: 'career' as const,
+              difficulty: 'intermediate' as const,
               prerequisites: [],
               leadsTo: question.followUpQuestions || [],
               relatedConcepts: question.keywords || [],

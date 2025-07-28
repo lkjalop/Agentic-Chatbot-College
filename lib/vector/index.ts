@@ -87,13 +87,22 @@ export async function searchVectors({
   includeVectors?: boolean;
 }) {
   try {
-    const results = await vectorIndex.query({
+    const queryOptions: any = {
       data: query,
       topK: limit,
       includeMetadata: true,
-      includeVectors,
-      filter
-    });
+      includeVectors
+    };
+    
+    if (filter && Object.keys(filter).length > 0) {
+      // Convert filter object to Upstash filter string format
+      const filterString = Object.entries(filter)
+        .map(([key, value]) => `${key} = "${value}"`)
+        .join(' AND ');
+      queryOptions.filter = filterString;
+    }
+    
+    const results = await vectorIndex.query(queryOptions);
     
     return { success: true, results };
   } catch (error) {
@@ -145,26 +154,26 @@ export async function searchWithRelationships({
   while (queue.length > 0 && results.length < limit * 2) {
     const current = queue.shift()!;
     
-    if (visited.has(current.id)) continue;
-    visited.add(current.id);
+    if (visited.has(String(current.id))) continue;
+    visited.add(String(current.id));
     
     results.push(current);
     
     if (current.depth < depth && current.metadata) {
       const related = [
-        ...(current.metadata.prerequisites || []),
-        ...(current.metadata.leadsTo || []),
-        ...(current.metadata.relatedConcepts || [])
+        ...(Array.isArray(current.metadata.prerequisites) ? current.metadata.prerequisites : []),
+        ...(Array.isArray(current.metadata.leadsTo) ? current.metadata.leadsTo : []),
+        ...(Array.isArray(current.metadata.relatedConcepts) ? current.metadata.relatedConcepts : [])
       ];
       
       for (const relatedId of related) {
-        if (!visited.has(relatedId)) {
+        if (!visited.has(String(relatedId))) {
           const relatedResult = await vectorIndex.fetch([relatedId], {
             includeMetadata: true
           });
           
           if (relatedResult?.[0]) {
-            queue.push({ ...relatedResult[0], depth: current.depth + 1 });
+            queue.push({ ...relatedResult[0], depth: current.depth + 1, score: 0.8 });
           }
         }
       }
