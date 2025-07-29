@@ -106,23 +106,71 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
   };
 
   const updateAgentsForMessage = (message: string) => {
-    // Analyze message and update agents dynamically
+    // This is just a placeholder during loading - real agents come from API
+    const agents: Agent[] = [
+      { id: 'loading', name: 'Analyzing...', icon: '🔄', confidence: 0, type: 'agent' }
+    ];
+    setActiveAgents(agents);
+  };
+
+  const updateAgentsWithDiagnostics = (diagnostics: any, intent: any) => {
     const agents: Agent[] = [];
     
-    if (message.toLowerCase().includes('technical') || message.toLowerCase().includes('code')) {
-      agents.push({ id: 't1', name: 'Technical Agent', icon: '💻', confidence: 90, type: 'agent' });
-    }
-    if (message.toLowerCase().includes('career') || message.toLowerCase().includes('job')) {
-      agents.push({ id: 'c1', name: 'Career Agent', icon: '💼', confidence: 88, type: 'agent' });
-    }
-    if (message.toLowerCase().includes('course') || message.toLowerCase().includes('bootcamp')) {
-      agents.push({ id: 'e1', name: 'Education Agent', icon: '🎓', confidence: 92, type: 'agent' });
+    // Add the actual agent that was used
+    const agentIcons = {
+      knowledge: '📚',
+      cultural: '🌍', 
+      schedule: '📅',
+      voice: '🎙️'
+    };
+    
+    agents.push({
+      id: 'active',
+      name: `${diagnostics.agent.charAt(0).toUpperCase() + diagnostics.agent.slice(1)} Agent`,
+      icon: agentIcons[diagnostics.agent as keyof typeof agentIcons] || '🤖',
+      confidence: diagnostics.confidence,
+      type: 'agent'
+    });
+    
+    // Add persona match if available
+    if (diagnostics.personaMatch) {
+      agents.push({
+        id: 'persona',
+        name: diagnostics.personaMatch.name,
+        icon: '👤',
+        confidence: diagnostics.personaMatch.similarity,
+        type: 'persona'
+      });
     }
     
-    // Always add knowledge agent
-    agents.push({ id: 'k1', name: 'Knowledge Agent', icon: '📚', confidence: 85, type: 'agent' });
+    // Add knowledge sources
+    if (diagnostics.sources && diagnostics.sources.length > 0) {
+      diagnostics.sources.slice(0, 2).forEach((source: string, index: number) => {
+        agents.push({
+          id: `source-${index}`,
+          name: source,
+          icon: '📖',
+          type: 'source'
+        });
+      });
+    }
+    
+    // Add reasoning
+    if (diagnostics.reasoning) {
+      agents.push({
+        id: 'reasoning',
+        name: 'AI Reasoning',
+        icon: '🧠',
+        type: 'reasoning'
+      });
+    }
     
     setActiveAgents(agents);
+    
+    // Auto-open agent panel to show the routing
+    if (!agentPanelOpen) {
+      setAgentPanelOpen(true);
+    }
   };
 
   const sendMessage = async () => {
@@ -155,10 +203,15 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
 
       const data = await response.json();
 
+      // Update agents with real diagnostic data from API
+      if (data.diagnostics) {
+        updateAgentsWithDiagnostics(data.diagnostics, data.intent);
+      }
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.summary || "I'm here to help! Could you please provide more details about what you're looking for?",
+        content: data.response || "I'm here to help! Could you please provide more details about what you're looking for?",
         timestamp: new Date()
       };
 
@@ -312,42 +365,45 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
               ))}
             </div>
 
-            <div className="agent-section">
-              <div className="section-title">PERSONA MATCH</div>
-              <div className="agent-item">
-                <div className="agent-icon">👤</div>
-                <div className="agent-name">{session?.user?.name || 'Student'}</div>
-                <div className="confidence">Active</div>
+            {activeAgents.filter(a => a.type === 'persona').length > 0 && (
+              <div className="agent-section">
+                <div className="section-title">PERSONA MATCH</div>
+                {activeAgents.filter(a => a.type === 'persona').map(agent => (
+                  <div key={agent.id} className="agent-item">
+                    <div className="agent-icon">{agent.icon}</div>
+                    <div className="agent-name">{agent.name}</div>
+                    {agent.confidence && (
+                      <div className="confidence">{agent.confidence}%</div>
+                    )}
+                  </div>
+                ))}
               </div>
-            </div>
+            )}
 
-            <div className="agent-section">
-              <div className="section-title">KNOWLEDGE SOURCES</div>
-              <div className="agent-item">
-                <div className="agent-name" style={{ fontSize: '13px', color: '#6c757d' }}>
-                  Course Catalog
-                </div>
+            {activeAgents.filter(a => a.type === 'source').length > 0 && (
+              <div className="agent-section">
+                <div className="section-title">KNOWLEDGE SOURCES</div>
+                {activeAgents.filter(a => a.type === 'source').map(agent => (
+                  <div key={agent.id} className="agent-item">
+                    <div className="agent-icon">{agent.icon}</div>
+                    <div className="agent-name" style={{ fontSize: '13px', color: '#6c757d' }}>
+                      {agent.name}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="agent-item">
-                <div className="agent-name" style={{ fontSize: '13px', color: '#6c757d' }}>
-                  Career Guidance Database
-                </div>
-              </div>
-              <div className="agent-item">
-                <div className="agent-name" style={{ fontSize: '13px', color: '#6c757d' }}>
-                  Student Support Resources
-                </div>
-              </div>
-            </div>
+            )}
 
-            <div className="agent-section">
-              <div className="section-title">REASONING</div>
-              <div style={{ padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid #e9ecef' }}>
-                <p style={{ fontSize: '13px', color: '#6c757d', lineHeight: 1.5 }}>
-                  Processing query with context-aware AI to provide personalized guidance
-                </p>
+            {activeAgents.filter(a => a.type === 'reasoning').length > 0 && (
+              <div className="agent-section">
+                <div className="section-title">AI REASONING</div>
+                <div style={{ padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid #e9ecef' }}>
+                  <p style={{ fontSize: '13px', color: '#6c757d', lineHeight: 1.5 }}>
+                    Query processed through multi-agent analysis with context-aware routing
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
