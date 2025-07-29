@@ -201,7 +201,19 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
         })
       });
 
+      // Check if the response is ok
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
+
+      // Check for error in response data
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      console.log('API Response:', data); // Debug log
 
       // Update agents with real diagnostic data from API
       if (data.diagnostics) {
