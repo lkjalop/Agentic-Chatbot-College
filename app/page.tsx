@@ -1,5 +1,5 @@
-import NewLandingPage from './components/new-landing-page';
+import { EAChatAssistant } from './components/ea-chat-assistant';
 
 export default function HomePage() {
-  return <NewLandingPage />;
+  return <EAChatAssistant />;
 }
