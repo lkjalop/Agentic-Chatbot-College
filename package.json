@@ -40,6 +40,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^2.5.2",
+    "twilio": "^5.3.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {
