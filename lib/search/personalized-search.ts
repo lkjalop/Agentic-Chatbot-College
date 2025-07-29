@@ -6,7 +6,8 @@ import {
   queryRecommendations,
   conversationAnalytics,
   User,
-  StudentQuery
+  StudentQuery,
+  ConversationAnalytics
 } from '@/lib/db/schema';
 import { eq, and, or, inArray, gte, sql, desc } from 'drizzle-orm';
 import { searchVectors } from '@/lib/vector';
@@ -361,7 +362,7 @@ export class PersonalizedSearchService {
     .orderBy(desc(sql`count(${queryFeedback.id})`))
     .limit(10);
     
-    return popularQueries.map(r => r.query);
+    return popularQueries.map((r: { query: string }) => r.query);
   }
   
   private async getJourneyBasedQueries(
@@ -434,8 +435,8 @@ export class PersonalizedSearchService {
       return 'exploring';
     }
     
-    const visaQueries = recentConversations.filter(c => c.visaRelated).length;
-    const courseQueries = recentConversations.filter(c => c.courseRelated).length;
+    const visaQueries = recentConversations.filter((c: ConversationAnalytics) => c.visaRelated).length;
+    const courseQueries = recentConversations.filter((c: ConversationAnalytics) => c.courseRelated).length;
     
     if (visaQueries > courseQueries && user.studentType === 'international') {
       return 'visa_planning';

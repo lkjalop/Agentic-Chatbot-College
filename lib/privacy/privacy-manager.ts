@@ -1,11 +1,15 @@
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import { db } from '@/lib/db';
 import { 
   users, 
   userSessions, 
   conversationAnalytics,
   queryFeedback,
-  queryRecommendations
+  queryRecommendations,
+  UserSession,
+  ConversationAnalytics,
+  QueryFeedback,
+  QueryRecommendation
 } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
@@ -110,26 +114,26 @@ export class PrivacyManager {
         createdAt: user.createdAt,
         lastLogin: user.lastLogin
       },
-      conversations: conversations.map((c: any) => ({
+      conversations: conversations.map((c: ConversationAnalytics) => ({
         id: c.id,
         query: c.userQuery,
         agent: c.selectedAgent,
         satisfaction: c.userSatisfaction,
         createdAt: c.createdAt
       })),
-      sessions: sessions.map(s => ({
+      sessions: sessions.map((s: UserSession) => ({
         id: s.id,
         startedAt: s.startedAt,
         duration: s.durationSeconds,
         interactions: s.interactions
       })),
-      feedback: feedback.map(f => ({
+      feedback: feedback.map((f: QueryFeedback) => ({
         id: f.id,
         isHelpful: f.isHelpful,
         feedbackText: f.feedbackText,
         createdAt: f.createdAt
       })),
-      recommendations: recommendations.map(r => ({
+      recommendations: recommendations.map((r: QueryRecommendation) => ({
         id: r.id,
         reason: r.recommendationReason,
         shown: r.shownToUser,

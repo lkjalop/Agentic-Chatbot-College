@@ -7,9 +7,9 @@ export function middleware(request) {
 
   const authHeader = request.headers.get('authorization')
   
-  // CHANGE THESE!
-  const USERNAME = 'student'
-  const PASSWORD = 'ea2024'
+  // Get credentials from environment variables
+  const USERNAME = process.env.BASIC_AUTH_USERNAME || 'student'
+  const PASSWORD = process.env.BASIC_AUTH_PASSWORD || 'ea2024'
   
   const expectedAuth = `Basic ${Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64')}`
   
