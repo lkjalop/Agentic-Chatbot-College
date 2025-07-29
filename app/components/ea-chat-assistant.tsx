@@ -119,6 +119,8 @@ export function EAChatAssistant() {
     autoResizeTextarea();
 
     try {
+      console.log('Sending API request for:', userMessage.content);
+      
       // Call personalized search API
       const response = await fetch('/api/search/personalized', {
         method: 'POST',
@@ -131,7 +133,14 @@ export function EAChatAssistant() {
         }),
       });
 
+      console.log('API Response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('API Response data:', data);
 
       // Simulate processing delay for UX
       await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
@@ -143,15 +152,15 @@ export function EAChatAssistant() {
         timestamp: new Date(),
         diagnostics: {
           agent: data.agent || 'knowledge',
-          confidence: (data.intent?.confidence || 0.8) * 100,
-          personaMatch: data.personaMatch || {
+          confidence: data.diagnostics?.confidence || (data.intent?.confidence || 0.8) * 100,
+          personaMatch: data.diagnostics?.personaMatch || {
             name: 'Rohan Patel',
             similarity: 91
           },
-          sources: data.results?.map((r: any) => r.title).slice(0, 3) || ['Business Analyst Bootcamp', 'Career Switcher Guide', 'India Student Support'],
-          reasoning: data.intent?.type === 'career_path' 
+          sources: data.diagnostics?.sources || data.results?.map((r: any) => r.metadata?.title || r.title).slice(0, 3) || ['Business Analyst Bootcamp', 'Career Switcher Guide', 'India Student Support'],
+          reasoning: data.diagnostics?.reasoning || (data.intent?.type === 'career_path' 
             ? 'Career guidance query detected, matched to similar background professionals'
-            : 'General inquiry routed through knowledge base with personalization'
+            : 'General inquiry routed through knowledge base with personalization')
         }
       };
 
