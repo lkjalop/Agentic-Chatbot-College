@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Debug Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .loading { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { margin: 5px; padding: 10px 15px; }
+        pre { background: #f8f9fa; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Production Debug Tool</h1>
+    <p>This tool will test your production deployment systematically.</p>
+
+    <div id="tests"></div>
+
+    <button onclick="runAllTests()">🚀 Run All Tests</button>
+    <button onclick="testEnvironment()">🔧 Test Environment</button>
+    <button onclick="testVectorDB()">🗄️ Test Vector Database</button>
+    <button onclick="testChat()">💬 Test Chat API</button>
+    <button onclick="populateDB()">📊 Populate Database</button>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let testResults = [];
+
+        function log(testName, status, message, data = null) {
+            const test = document.createElement('div');
+            test.className = `test ${status}`;
+            test.innerHTML = `
+                <h3>${testName}</h3>
+                <p>${message}</p>
+                ${data ? `<pre>${JSON.stringify(data, null, 2)}</pre>` : ''}
+            `;
+            document.getElementById('tests').appendChild(test);
+        }
+
+        async function testEnvironment() {
+            log('Environment Check', 'loading', 'Testing if environment variables are configured...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/test-vector`);
+                const data = await response.json();
+                
+                if (response.ok && data.stats) {
+                    log('Environment Check', 'success', 
+                        `✅ Environment variables configured correctly! Vector DB has ${data.stats.info?.vectorCount || 0} vectors.`, 
+                        data);
+                } else {
+                    log('Environment Check', 'error', 
+                        '❌ Environment variables missing or misconfigured. Check Vercel settings.', 
+                        data);
+                }
+            } catch (error) {
+                log('Environment Check', 'error', 
+                    '❌ Failed to connect to test endpoint. Deployment may be broken.', 
+                    error.message);
+            }
+        }
+
+        async function testVectorDB() {
+            log('Vector Database', 'loading', 'Testing vector database population...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/search/personalized`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        query: 'test query for debugging' 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.response && !data.response.includes('trouble connecting')) {
+                    log('Vector Database', 'success', 
+                        '✅ Vector database working! Got real response.', 
+                        { response: data.response.substring(0, 200) + '...' });
+                } else {
+                    log('Vector Database', 'error', 
+                        '❌ Vector database empty or auto-population failed.', 
+                        data);
+                }
+            } catch (error) {
+                log('Vector Database', 'error', 
+                    '❌ API request failed completely.', 
+                    error.message);
+            }
+        }
+
+        async function testChat() {
+            log('Chat Interface', 'loading', 'Testing chat with your specific queries...');
+            
+            const testQueries = [
+                'hey can I get some help in regards to visa and the courses you have please',
+                'I thought this was fixed can you schedule a calendar for me'
+            ];
+
+            for (const query of testQueries) {
+                try {
+                    const response = await fetch(`${API_BASE}/api/search/personalized`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok && data.response && !data.response.includes('trouble connecting')) {
+                        log(`Chat Test: "${query.substring(0, 30)}..."`, 'success', 
+                            '✅ Got proper response!', 
+                            { 
+                                query: query,
+                                response: data.response.substring(0, 300) + '...',
+                                agent: data.agent,
+                                personaMatch: data.diagnostics?.personaMatch?.name
+                            });
+                    } else {
+                        log(`Chat Test: "${query.substring(0, 30)}..."`, 'error', 
+                            '❌ Still getting error response.', 
+                            data);
+                    }
+                } catch (error) {
+                    log(`Chat Test: "${query.substring(0, 30)}..."`, 'error', 
+                        '❌ Request failed.', 
+                        error.message);
+                }
+            }
+        }
+
+        async function populateDB() {
+            log('Database Population', 'loading', 'Manually populating vector database...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/load-sample-data`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    log('Database Population', 'success', 
+                        `✅ Successfully populated database with ${data.totalVectors} vectors!`, 
+                        data);
+                } else {
+                    log('Database Population', 'error', 
+                        '❌ Database population failed.', 
+                        data);
+                }
+            } catch (error) {
+                log('Database Population', 'error', 
+                    '❌ Population request failed.', 
+                    error.message);
+            }
+        }
+
+        async function runAllTests() {
+            document.getElementById('tests').innerHTML = '';
+            
+            log('Starting Tests', 'loading', 'Running comprehensive production tests...');
+            
+            await testEnvironment();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testVectorDB();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testChat();
+            
+            log('Tests Complete', 'success', 
+                '✅ All tests completed! Check results above. If any tests failed, fix environment variables in Vercel.');
+        }
+
+        // Auto-run environment check on page load
+        window.addEventListener('load', testEnvironment);
+    </script>
+</body>
+</html>
