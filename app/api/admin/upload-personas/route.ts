@@ -8,13 +8,30 @@ export async function POST(request: NextRequest) {
     console.log('🚀 Starting personas upload to Upstash Vector...');
     
     // Read the generated knowledge base JSON
-    const knowledgeBasePath = path.join(process.cwd(), '..', 'data', 'processed', 'chatbot_knowledge_base_ALL_PERSONAS.json');
+    let knowledgeBasePath = path.join(process.cwd(), '..', 'data', 'processed', 'chatbot_knowledge_base_ALL_PERSONAS.json');
+    
+    console.log('Looking for knowledge base at:', knowledgeBasePath);
+    console.log('File exists:', fs.existsSync(knowledgeBasePath));
     
     if (!fs.existsSync(knowledgeBasePath)) {
-      return Response.json({ 
-        error: 'Knowledge base file not found', 
-        path: knowledgeBasePath 
-      }, { status: 404 });
+      // Try alternative paths
+      const altPath1 = path.join(process.cwd(), 'data', 'processed', 'chatbot_knowledge_base_ALL_PERSONAS.json');
+      const altPath2 = path.join(process.cwd(), '..', '..', 'data', 'processed', 'chatbot_knowledge_base_ALL_PERSONAS.json');
+      
+      console.log('Trying alternative path 1:', altPath1, 'exists:', fs.existsSync(altPath1));
+      console.log('Trying alternative path 2:', altPath2, 'exists:', fs.existsSync(altPath2));
+      
+      if (fs.existsSync(altPath1)) {
+        knowledgeBasePath = altPath1;
+      } else if (fs.existsSync(altPath2)) {
+        knowledgeBasePath = altPath2;
+      } else {
+        return Response.json({ 
+          error: 'Knowledge base file not found in any expected location', 
+          paths_tried: [knowledgeBasePath, altPath1, altPath2],
+          cwd: process.cwd()
+        }, { status: 404 });
+      }
     }
     
     const knowledgeBase = JSON.parse(fs.readFileSync(knowledgeBasePath, 'utf-8'));

@@ -43,16 +43,32 @@ export async function POST(request: NextRequest) {
       query,
       limit: limit * 2,
       filter: {
-        agent: selectedAgent,
+        // Remove agent filter temporarily to get better results
         ...filters
       }
     });
 
-    // If no vector results, add fallback data so the system still works
-    if (!searchResults.results || searchResults.results.length === 0) {
+    console.log(`Vector search returned ${searchResults.results?.length || 0} results`);
+
+    // Only use fallback if absolutely no vector results exist
+    if (!searchResults.success || !searchResults.results || searchResults.results.length === 0) {
       console.log('No vector results found, using fallback data');
       searchResults.results = getFallbackSearchResults(query, selectedAgent);
       searchResults.success = true;
+    } else {
+      // Use real vector results - transform them to match expected format
+      searchResults.results = searchResults.results.map((result: any) => ({
+        id: result.id,
+        content: result.metadata?.content || result.content || '',
+        metadata: {
+          title: result.metadata?.title || 'Career Guidance',
+          category: result.metadata?.category || 'career',
+          contentType: result.metadata?.contentType || 'career',
+          tags: result.metadata?.tags || [],
+          careerPaths: result.metadata?.careerPaths || []
+        },
+        score: result.score || 0.9
+      }));
     }
 
     // Apply personalization if user is authenticated and database is available
