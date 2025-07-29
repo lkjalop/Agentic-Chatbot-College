@@ -141,33 +141,53 @@ export async function generateResponse(
       return 'I found relevant information in the search results. Please review them for details.';
     }
 
-    const context = searchResults.map(r => 
-      `Title: ${r.metadata?.title}\nContent: ${r.content}\nPrerequisites: ${r.metadata?.prerequisites?.join(', ')}\nLeads to: ${r.metadata?.leadsTo?.join(', ')}`
-    ).join('\n\n---\n\n');
+    // Extract persona information from search results
+    const personaData = searchResults.find(r => 
+      r.content.includes('Persona:') || r.metadata?.contentType === 'career'
+    );
 
-    const systemPrompt = `You are an educational assistant. Based on the search results, provide a helpful response to the user's query.
-For ${intent.type} queries, focus on:
-- prerequisite: List prerequisites in order, explain why each is important
-- career_path: Outline progression steps, required skills, timeline
-- next_steps: Suggest logical next topics to learn
-- relationship: Explain connections between concepts
-- comparison: Highlight key differences and similarities
+    const context = searchResults.map(r => r.content).join('\n\n---\n\n');
 
-Keep responses concise, practical, and actionable.`;
+    // Create persona-aware system prompt
+    const systemPrompt = `You are an empathetic AI career coach who speaks like a real human, not a textbook. Your responses should:
+
+TONE & STYLE:
+- Be conversational, warm, and understanding
+- Acknowledge emotions and frustrations when mentioned
+- Use "I understand..." and "Let me help you..." 
+- Avoid bullet points, formal structures, and educational templates
+- Sound like advice from a trusted mentor, not a career counselor
+
+PERSONA AWARENESS:
+- If you find persona data in search results, reference their specific situation naturally
+- Don't say "Based on Rohan Patel's case..." - instead weave their experience into advice
+- Use details like visa status, location, current struggles as context for relevant advice
+
+RESPONSE STRUCTURE:
+- Start by acknowledging their feelings/situation
+- Give 2-3 pieces of practical, actionable advice 
+- End with encouragement and next steps
+- Keep it under 150 words, conversational paragraphs
+
+AVOID:
+- Lists with "1. 2. 3." or bullet points
+- Formal headings like "Prerequisites:" or "Career Path:"
+- Generic advice that could apply to anyone
+- Educational jargon or structured templates`;
 
     const completion = await groq.chat.completions.create({
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Query: ${query}\n\nSearch Results:\n${context}` }
+        { role: 'user', content: `User Query: "${query}"\n\nRelevant Information:\n${context}\n\nProvide a human, conversational response that acknowledges their specific situation and feelings.` }
       ],
       model: 'llama-3.3-70b-versatile',
-      temperature: 0.7,
-      max_tokens: 500
+      temperature: 0.8,
+      max_tokens: 300
     });
 
-    return completion.choices[0]?.message?.content || 'I found some relevant information in the search results above.';
+    return completion.choices[0]?.message?.content || 'I understand what you\'re going through. Let me help you figure out the next steps that would work best for your situation.';
   } catch (error) {
     console.error('Response generation error:', error);
-    return 'I found relevant information in the search results. Please review them for details.';
+    return 'I understand what you\'re going through. Let me help you figure out the next steps that would work best for your situation.';
   }
 }
