@@ -6,6 +6,11 @@ let vectorIndex: Index | null = null;
 export function getVectorIndex(): Index {
   if (!vectorIndex) {
     if (!process.env.UPSTASH_VECTOR_REST_URL || !process.env.UPSTASH_VECTOR_REST_TOKEN) {
+      // During build time, return a mock for static generation
+      if (process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV) {
+        console.warn('Upstash Vector environment variables not defined, using mock for build');
+        return createMockVectorIndex();
+      }
       throw new Error('Upstash Vector environment variables are not defined');
     }
     
@@ -16,6 +21,16 @@ export function getVectorIndex(): Index {
   }
   
   return vectorIndex;
+}
+
+function createMockVectorIndex(): Index {
+  return {
+    upsert: () => Promise.resolve({}),
+    query: () => Promise.resolve({ matches: [] }),
+    delete: () => Promise.resolve({}),
+    info: () => Promise.resolve({ vectorCount: 0, dimension: 1024 }),
+    fetch: () => Promise.resolve([])
+  } as any;
 }
 
 export const VectorMetadataSchema = z.object({

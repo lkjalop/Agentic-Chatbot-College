@@ -8,6 +8,11 @@ let sqlInstance: any = null;
 export function getDb() {
   if (!dbInstance) {
     if (!process.env.NEON_DATABASE_URL) {
+      // During build time, return a mock database
+      if (process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV) {
+        console.warn('NEON_DATABASE_URL not defined, using mock database for build');
+        return createMockDb();
+      }
       throw new Error('NEON_DATABASE_URL is not defined');
     }
     
@@ -16,6 +21,24 @@ export function getDb() {
   }
   
   return dbInstance;
+}
+
+function createMockDb() {
+  return {
+    query: {
+      users: {
+        findFirst: () => Promise.resolve(null)
+      }
+    },
+    insert: () => ({
+      values: () => Promise.resolve()
+    }),
+    update: () => ({
+      set: () => ({
+        where: () => Promise.resolve()
+      })
+    })
+  };
 }
 
 // Export getDb as db for easy usage: db()

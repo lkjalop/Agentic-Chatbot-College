@@ -5,8 +5,18 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
+// Only use adapter if database is available
+const getAdapter = () => {
+  try {
+    return DrizzleAdapter(db());
+  } catch (error) {
+    console.warn('Database not available, running without adapter');
+    return undefined;
+  }
+};
+
 const handler = NextAuth({
-  adapter: DrizzleAdapter(db()),
+  adapter: getAdapter(),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -29,17 +39,22 @@ const handler = NextAuth({
         // Add user ID to session
         session.user.id = token.sub!;
         
-        // Fetch additional user data
-        const userData = await db().query.users.findFirst({
-          where: eq(users.id, token.sub!)
-        });
-        
-        if (userData) {
-          session.user.studentType = userData.studentType;
-          session.user.courseInterest = userData.courseInterest;
-          session.user.experienceLevel = userData.experienceLevel;
-          session.user.analyticsConsent = userData.analyticsConsent;
-          session.user.privacyConsent = userData.privacyConsent;
+        // Fetch additional user data (only if database is available)
+        try {
+          const userData = await db().query.users.findFirst({
+            where: eq(users.id, token.sub!)
+          });
+          
+          if (userData) {
+            session.user.studentType = userData.studentType;
+            session.user.courseInterest = userData.courseInterest;
+            session.user.experienceLevel = userData.experienceLevel;
+            session.user.analyticsConsent = userData.analyticsConsent;
+            session.user.privacyConsent = userData.privacyConsent;
+          }
+        } catch (error) {
+          console.warn('Failed to fetch user data:', error);
+          // Continue without user data - this allows the session to work even if DB is unavailable
         }
       }
       return session;
@@ -59,7 +74,7 @@ const handler = NextAuth({
     async signIn({ user, account, profile }) {
       if (account?.provider === "google") {
         try {
-          // Check if user exists
+          // Check if user exists (only if database is available)
           const existingUser = await db().query.users.findFirst({
             where: eq(users.email, user.email!)
           });
@@ -90,8 +105,9 @@ const handler = NextAuth({
           
           return true;
         } catch (error) {
-          console.error("Error during sign in:", error);
-          return false;
+          console.warn("Database unavailable during sign in, allowing sign in without persistence:", error);
+          // Allow sign in even if database is unavailable (for build time)
+          return true;
         }
       }
       

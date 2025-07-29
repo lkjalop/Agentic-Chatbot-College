@@ -1,9 +1,22 @@
 import Groq from 'groq-sdk';
 import { z } from 'zod';
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+// Initialize Groq client with fallback for build time
+const getGroqClient = () => {
+  if (!process.env.GROQ_API_KEY) {
+    if (process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV) {
+      console.warn('GROQ_API_KEY not defined, using mock client for build');
+      return null;
+    }
+    throw new Error('GROQ_API_KEY is not defined');
+  }
+  
+  return new Groq({
+    apiKey: process.env.GROQ_API_KEY,
+  });
+};
+
+const groq = getGroqClient();
 
 export const IntentSchema = z.object({
   type: z.enum([
@@ -28,6 +41,17 @@ export type Intent = z.infer<typeof IntentSchema>;
 
 export async function analyzeIntent(query: string): Promise<Intent> {
   try {
+    // Return fallback if groq client is not available (build time)
+    if (!groq) {
+      return {
+        type: 'definition',
+        confidence: 0.5,
+        entities: query.split(' ').filter(w => w.length > 3),
+        searchStrategy: 'semantic',
+        clarificationNeeded: false
+      };
+    }
+
     const systemPrompt = `You are an intent analyzer for an educational RAG system. Analyze the user's query and return a JSON object with:
 - type: the intent type (definition, comparison, prerequisite, career_path, next_steps, relationship, tutorial, recommendation, clarification)
 - confidence: confidence score 0-1
@@ -71,6 +95,11 @@ Examples:
 
 export async function enhanceQuery(query: string, intent: Intent): Promise<string> {
   try {
+    // Return original query if groq client is not available
+    if (!groq) {
+      return query;
+    }
+
     const prompts: Record<string, string> = {
       prerequisite: `List the fundamental prerequisites needed before learning: ${query}`,
       career_path: `Career progression path and skills required for: ${query}`,
@@ -107,6 +136,11 @@ export async function generateResponse(
   intent: Intent
 ): Promise<string> {
   try {
+    // Return fallback response if groq client is not available
+    if (!groq) {
+      return 'I found relevant information in the search results. Please review them for details.';
+    }
+
     const context = searchResults.map(r => 
       `Title: ${r.metadata?.title}\nContent: ${r.content}\nPrerequisites: ${r.metadata?.prerequisites?.join(', ')}\nLeads to: ${r.metadata?.leadsTo?.join(', ')}`
     ).join('\n\n---\n\n');

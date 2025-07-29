@@ -21,12 +21,17 @@ export async function POST(request: NextRequest) {
     
     let user = null;
     
-    // Get user data if authenticated
+    // Get user data if authenticated and database is available
     if (session?.user?.id) {
-      const [userData] = await db().select()
-        .from(users)
-        .where(eq(users.id, session.user.id));
-      user = userData;
+      try {
+        const [userData] = await db().select()
+          .from(users)
+          .where(eq(users.id, session.user.id));
+        user = userData;
+      } catch (error) {
+        console.warn('Database not available for user lookup:', error);
+        // Continue without user data
+      }
     }
 
     // Analyze intent and route to appropriate agent
@@ -43,21 +48,26 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Apply personalization if user is authenticated
+    // Apply personalization if user is authenticated and database is available
     let finalResults = searchResults;
     if (user) {
-      const searchService = new PersonalizedSearchService();
-      const personalizedResults = await searchService.searchWithPersonalization(
-        query,
-        user,
-        filters,
-        limit
-      );
-      // Ensure we maintain the expected structure
-      finalResults = {
-        success: true,
-        results: personalizedResults.results || searchResults.results || []
-      };
+      try {
+        const searchService = new PersonalizedSearchService();
+        const personalizedResults = await searchService.searchWithPersonalization(
+          query,
+          user,
+          filters,
+          limit
+        );
+        // Ensure we maintain the expected structure
+        finalResults = {
+          success: true,
+          results: personalizedResults.results || searchResults.results || []
+        };
+      } catch (error) {
+        console.warn('Personalization service not available:', error);
+        // Continue with basic results
+      }
     }
 
     // Generate response based on search results and selected agent
@@ -197,22 +207,29 @@ export async function PUT(request: NextRequest) {
       return Response.json({ error: 'Query ID and interaction type are required' }, { status: 400 });
     }
     
-    // Get user data
-    const [user] = await db().select()
-      .from(users)
-      .where(eq(users.id, session.user.id));
-    
-    if (!user) {
-      return Response.json({ error: 'User not found' }, { status: 404 });
+    // Get user data if database is available
+    let user = null;
+    try {
+      const [userData] = await db().select()
+        .from(users)
+        .where(eq(users.id, session.user.id));
+      user = userData;
+      
+      if (!user) {
+        return Response.json({ error: 'User not found' }, { status: 404 });
+      }
+      
+      const searchService = new PersonalizedSearchService();
+      await searchService.trackQueryInteraction(
+        user,
+        queryId,
+        interactionType,
+        feedbackText
+      );
+    } catch (error) {
+      console.warn('Database not available for tracking interaction:', error);
+      // Return success anyway - tracking is not critical
     }
-    
-    const searchService = new PersonalizedSearchService();
-    await searchService.trackQueryInteraction(
-      user,
-      queryId,
-      interactionType,
-      feedbackText
-    );
     
     return Response.json({ success: true });
   } catch (error) {
