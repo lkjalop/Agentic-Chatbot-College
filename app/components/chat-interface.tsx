@@ -409,7 +409,7 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
       </div>
 
       {/* Voice Call Widget */}
-      <VoiceCallWidget />
+      <VoiceCallWidget chatOpen={true} />
 
       <style jsx>{`
         .chat-interface {

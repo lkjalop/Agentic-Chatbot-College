@@ -78,9 +78,12 @@ export default function NewLandingPage() {
           💬
         </button>
         <div className="float-btn call-btn">
-          <VoiceCallWidget trigger="inline" />
+          <VoiceCallWidget trigger="inline" chatOpen={false} />
         </div>
       </div>
+
+      {/* Floating Twilio button when chat is closed */}
+      {!showChat && <VoiceCallWidget chatOpen={false} />}
 
       <style jsx>{`
         .landing-page {

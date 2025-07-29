@@ -13,9 +13,10 @@ interface CallStatus {
 interface VoiceCallWidgetProps {
   trigger?: 'floating' | 'inline';
   onCallInitiated?: () => void;
+  chatOpen?: boolean;
 }
 
-export default function VoiceCallWidget({ trigger = 'floating', onCallInitiated }: VoiceCallWidgetProps) {
+export default function VoiceCallWidget({ trigger = 'floating', onCallInitiated, chatOpen = false }: VoiceCallWidgetProps) {
   const [showCallDialog, setShowCallDialog] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [callStatus, setCallStatus] = useState<CallStatus>({ status: 'idle', message: '' });
@@ -126,13 +127,24 @@ export default function VoiceCallWidget({ trigger = 'floating', onCallInitiated 
       {trigger === 'floating' && (
         <button
           onClick={() => setShowCallDialog(true)}
-          className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 z-50 flex items-center justify-center group"
+          className={cn(
+            "fixed text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 z-40 flex items-center justify-center group bg-gradient-to-r from-orange-500 to-red-500",
+            chatOpen 
+              ? "bottom-20 right-6 w-12 h-12 md:bottom-6 md:right-6 md:w-16 md:h-16" // Smaller on mobile when chat open, above input area
+              : "bottom-6 right-6 w-16 h-16" // Normal position when chat closed
+          )}
           title="Call AI Assistant"
         >
-          <Phone className="w-7 h-7 group-hover:animate-bounce" />
+          <Phone className={cn(
+            "group-hover:animate-bounce",
+            chatOpen ? "w-5 h-5 md:w-7 md:h-7" : "w-7 h-7"
+          )} />
           
-          {/* Pulse animation */}
-          <div className="absolute inset-0 rounded-full bg-orange-400 animate-ping opacity-20"></div>
+          {/* Pulse animation - reduced when chat open */}
+          <div className={cn(
+            "absolute inset-0 rounded-full bg-orange-400 opacity-20",
+            chatOpen ? "" : "animate-ping"
+          )}></div>
         </button>
       )}
       
