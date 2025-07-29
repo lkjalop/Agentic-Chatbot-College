@@ -7,6 +7,7 @@ import { PersonalizedSearchService } from '@/lib/search/personalized-search';
 import { searchVectors } from '@/lib/vector';
 import { analyzeIntent } from '@/lib/ai/groq';
 import { routeToAgent } from '@/lib/ai/router';
+import { batchUpsertVectors, VectorMetadata } from '@/lib/vector';
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,11 +51,46 @@ export async function POST(request: NextRequest) {
 
     console.log(`Vector search returned ${searchResults.results?.length || 0} results`);
 
-    // Only use fallback if absolutely no vector results exist
+    // Auto-populate database if empty (first-time deployment)
     if (!searchResults.success || !searchResults.results || searchResults.results.length === 0) {
-      console.log('No vector results found, using fallback data');
-      searchResults.results = getFallbackSearchResults(query, selectedAgent);
-      searchResults.success = true;
+      console.log('Vector database appears empty, attempting to auto-populate...');
+      try {
+        await autoPopulateDatabase();
+        console.log('Auto-population completed, retrying search...');
+        
+        // Retry search after population
+        const retryResults = await searchVectors({
+          query,
+          limit: limit * 2,
+          filter: { ...filters }
+        });
+        
+        if (retryResults.success && retryResults.results && retryResults.results.length > 0) {
+          searchResults.results = retryResults.results.map((result: any) => ({
+            id: result.id,
+            content: result.metadata?.content || result.content || '',
+            metadata: {
+              title: result.metadata?.title || 'Career Guidance',
+              category: result.metadata?.category || 'career',
+              contentType: result.metadata?.contentType || 'career',
+              tags: result.metadata?.tags || [],
+              careerPaths: result.metadata?.careerPaths || []
+            },
+            score: result.score || 0.9
+          }));
+          searchResults.success = true;
+        } else {
+          // Still no results, use fallback
+          console.log('No vector results found after auto-population, using fallback data');
+          searchResults.results = getFallbackSearchResults(query, selectedAgent);
+          searchResults.success = true;
+        }
+      } catch (error) {
+        console.error('Auto-population failed:', error);
+        console.log('Using fallback data due to auto-population failure');
+        searchResults.results = getFallbackSearchResults(query, selectedAgent);
+        searchResults.success = true;
+      }
     } else {
       // Use real vector results - transform them to match expected format
       searchResults.results = searchResults.results.map((result: any) => ({
@@ -274,6 +310,80 @@ function generateReasoning(intentType: string, agent: string, query: string): st
   
   return reasoningTemplates[intentType as keyof typeof reasoningTemplates] || 
          `Query processed through ${agent} agent using multi-vector search and persona-aware ranking.`;
+}
+
+async function autoPopulateDatabase(): Promise<void> {
+  const essentialPersonas = [
+    {
+      id: 'rohan-patel-auto',
+      content: `Persona: Rohan Patel
+Category: Career Switcher
+Background: Rohan Patel is a 27-year-old from Mumbai, India, currently living in Wollongong, NSW, Australia. He completed his Bachelor's in Mechanical Engineering in India but pivoted to a Master's in Business Analytics at the University of Wollongong. Since graduating over a year ago, Rohan has struggled to land a relevant role in Australia's competitive market. He has applied for countless jobs in analytics, data, and ICT fields, but most responses are rejections. In the meantime, Rohan drives for Uber to cover living expenses, all while feeling mounting pressure as the months on his 485 post-study work visa tick away (he has 2.5 years left).
+Challenges: Feeling overwhelmed by job rejections, visa time pressure, driving Uber while overqualified, frustrated by lack of opportunities
+Goals: Get real project experience, secure ICT job, achieve permanent residency`,
+      tags: ['career_changer', 'international_student', 'business_analytics', 'visa_485', 'uber_driver', 'frustrated', 'overwhelmed']
+    },
+    {
+      id: 'sandeep-shrestha-auto',
+      content: `Persona: Sandeep Shrestha
+Category: Recent Graduate  
+Background: Sandeep Shrestha is a 23-year-old from Nepal who recently completed his Bachelor's in Computer Science in Australia. He's looking to start his career as a Full Stack Developer but needs guidance on building a portfolio, preparing for technical interviews, and understanding the Australian job market. He has impressive MERN stack skills but lacks team experience.
+Challenges: Feeling lost about job market, needs portfolio guidance, lacks team experience
+Goals: Get first developer job in Australia, build professional portfolio, gain team experience`,
+      tags: ['recent_graduate', 'full_stack_developer', 'computer_science', 'portfolio', 'mern_stack', 'lost', 'career_guidance']
+    },
+    {
+      id: 'visa-course-guidance',
+      content: `International Student Support and Course Scheduling
+Visa Support: Comprehensive guidance for international students on 485, 500, and other visa types
+Course Scheduling: Flexible scheduling options that accommodate visa requirements and work restrictions  
+Human Support: Academic advisors and international student counselors available for personalized guidance
+Calendar Integration: Online booking systems to schedule appointments with advisors
+Contact Process: Students can schedule consultations through online calendar systems or contact student services directly
+Course Information: Detailed information about cybersecurity bootcamps, data analytics courses, and career transition programs
+Prerequisites: Most programs designed for beginners with basic IT understanding, no advanced coding required`,
+      tags: ['visa_support', 'course_scheduling', 'international_students', 'calendar', 'academic_advising', 'cybersecurity', 'data_course', 'human_support']
+    },
+    {
+      id: 'cybersecurity-bootcamp',
+      content: `Cybersecurity Course Information
+Program: Cyber Security Bootcamp - 4-week intensive program
+Focus: Cloud security challenges in AWS and Azure environments
+Technologies: AWS Security, Azure Security, IAM, API Security, Cloud Protection
+Contact: Course advisors available to discuss curriculum, prerequisites, and enrollment
+Scheduling: Flexible scheduling options available, contact academic advisors
+Career Outcomes: Prepares students for cloud security specialist, cybersecurity analyst, and security consultant roles
+Support: Dedicated support for international students and career changers`,
+      tags: ['cybersecurity', 'bootcamp', 'aws', 'azure', 'cloud_security', 'course_info', 'career_change', 'scheduling']
+    }
+  ];
+
+  const vectors = essentialPersonas.map((persona) => {
+    const metadata: VectorMetadata = {
+      id: persona.id,
+      title: persona.content.split('\n')[0].replace('Persona: ', '').replace('Program: ', '').replace('International Student Support', 'Student Support'),
+      content: persona.content,
+      category: 'career',
+      contentType: 'career' as const,
+      difficulty: 'intermediate' as const,
+      prerequisites: [],
+      leadsTo: [],
+      relatedConcepts: [],
+      careerPaths: ['business-analyst', 'full-stack-developer', 'data-analyst'],
+      tags: persona.tags,
+      confidenceScore: 0.95,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    return {
+      id: persona.id,
+      content: persona.content,
+      metadata: metadata
+    };
+  });
+
+  await batchUpsertVectors(vectors);
 }
 
 export async function PUT(request: NextRequest) {
