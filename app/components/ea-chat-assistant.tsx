@@ -568,14 +568,14 @@ export function EAChatAssistant() {
               </div>
 
               {/* Input Area */}
-              <div className="p-5 border-t border-gray-200 bg-white chat-input-area">
+              <div className="flex-shrink-0 p-5 border-t border-gray-200 bg-white">
                 {isListening && (
-                  <div className="max-w-4xl mx-auto mb-2 flex items-center gap-2 text-sm text-[--ea-orange] font-medium">
+                  <div className="mb-2 flex items-center gap-2 text-sm text-[--ea-orange] font-medium">
                     <div className="w-2 h-2 bg-[--ea-orange] rounded-full animate-pulse"></div>
                     Listening... (speak naturally)
                   </div>
                 )}
-                <div className="max-w-4xl mx-auto flex items-end gap-3 bg-gray-50 border-2 border-gray-200 rounded-xl p-2 focus-within:border-[--ea-orange] focus-within:bg-white transition-all duration-200 mobile-safe-area">
+                <div className="flex items-end gap-3 bg-gray-50 border-2 border-gray-200 rounded-xl p-2 focus-within:border-[--ea-orange] focus-within:bg-white transition-all duration-200">
                   <textarea
                     ref={textareaRef}
                     value={inputValue}

@@ -241,11 +241,11 @@ async function generateAgentResponse(
   const context = searchResults.results?.slice(0, 3).map((r: any) => r.content).join('\n') || '';
   
   const agentPrompts = {
-    knowledge: `You are a Knowledge Agent. Based on this query: "${query}", provide concise career guidance in 1-2 sentences max. End with a question.`,
-    schedule: `You are a Scheduling Agent. For the query: "${query}", provide brief scheduling advice in 1-2 sentences max. End with a question.`,
-    cultural: `You are a Cultural Intelligence Agent. For the query: "${query}", provide brief culturally-aware guidance in 1-2 sentences max. End with a question.`,
-    voice: `You are a Voice Agent. For the query: "${query}", provide brief communication advice in 1-2 sentences max. End with a question.`,
-    booking: `You are a Booking Agent. For the query: "${query}", help schedule appointments with advisors and provide intelligent context analysis. Use smart booking system.`
+    knowledge: `You're a friendly career advisor. For "${query}", give practical advice in 1-2 conversational sentences. Sound human and relatable, then ask what they'd like to explore next.`,
+    schedule: `You're helping with timing and planning. For "${query}", give friendly scheduling advice in 1-2 sentences like you're talking to a friend. Ask what specific timeline they're working with.`,
+    cultural: `You understand the international student experience. For "${query}", give warm, culturally-aware advice in 1-2 sentences. Ask what specific cultural challenges they're facing.`,
+    voice: `You're a communication coach who gets it. For "${query}", give encouraging speaking advice in 1-2 sentences. Ask what communication situation they're preparing for.`,
+    booking: `You help connect people with advisors. For "${query}", provide smart booking assistance with context analysis using conversational, helpful language.`
   };
 
   const prompt = agentPrompts[agent as keyof typeof agentPrompts] || agentPrompts.knowledge;
@@ -465,6 +465,25 @@ Support: Dedicated support for international students and career changers`,
 function getSimpleAgentRouting(query: string): string {
   const lowercaseQuery = query.toLowerCase();
   
+  // Booking agent for appointment/advisor queries - MUST come first
+  if (lowercaseQuery.includes('book') || 
+      lowercaseQuery.includes('appointment with') ||
+      lowercaseQuery.includes('meet with') ||
+      lowercaseQuery.includes('advisor') ||
+      lowercaseQuery.includes('consultation') ||
+      lowercaseQuery.includes('schedule a meeting') ||
+      lowercaseQuery.includes('opt application') ||
+      lowercaseQuery.includes('opt') ||
+      lowercaseQuery.includes('visa help') ||
+      lowercaseQuery.includes('need help with') ||
+      lowercaseQuery.includes('i need help with') ||
+      lowercaseQuery.includes('help with my') ||
+      lowercaseQuery.includes('application') ||
+      lowercaseQuery.includes('visa application') ||
+      lowercaseQuery.includes('immigration help')) {
+    return 'booking';
+  }
+  
   // Schedule agent for time/interview related queries
   if (lowercaseQuery.includes('interview') || 
       lowercaseQuery.includes('schedule') || 
@@ -502,15 +521,15 @@ function getSimpleAgentRouting(query: string): string {
 
 function getAgentSpecificFallbackResponse(query: string, agent: string): string {
   const responses = {
-    schedule: `I can help schedule appointments with advisors for courses or career guidance. What time works best?`,
+    schedule: `Hey! I can totally help you figure out the timing for your career steps. What's your timeline looking like?`,
 
-    cultural: `I understand visa and cultural challenges for international students. Need 485 visa advice or workplace tips?`,
+    cultural: `I get the visa and cultural stuff - it's tough being an international student! Are you dealing with 485 visa timing or workplace culture questions?`,
 
-    voice: `Let's improve your communication skills for interviews and presentations. Focus on speaking confidence or interview techniques?`,
+    voice: `Communication skills are so important! Whether it's interviews or presentations, I'm here to help. What situation are you preparing for?`,
 
-    knowledge: `I'll help with Business Analyst and Data Analyst career paths in Australia. Want to know key differences or required skills?`,
+    knowledge: `Career paths in Australia can be confusing, but you're in the right place! Are you thinking Business Analyst, Data Analyst, or exploring other options?`,
 
-    booking: `I'll help you schedule a consultation with Kevin for personalized career guidance. Let me analyze your needs and provide booking options with context.`
+    booking: `Perfect! Let me help you get connected with Kevin for some personalized guidance. I'll make sure he has all the context about your situation before you chat.`
   };
 
   return responses[agent as keyof typeof responses] || responses.knowledge;

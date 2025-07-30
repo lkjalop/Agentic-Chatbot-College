@@ -114,26 +114,25 @@ export async function generateBookingResponse(query: string): Promise<string> {
   const encodedContext = encodeURIComponent(`Topic: ${contextLabel}\nQuery: ${query}\nAI Confidence: ${context.confidence}%`);
   const calendlyWithContext = `${CALENDLY_URL}?a1=${encodedContext}`;
 
-  return `🎯 **${contextLabel}** detected (${context.confidence}% confidence)
+  return `Hey! I totally get what you're going through with ${contextLabel.toLowerCase()}. Let me help you set up a chat with Kevin who can give you the personalized guidance you need.
 
-📅 **[Book Your Consultation](${calendlyWithContext})**
+📅 **[Book Your Meeting Here](${calendlyWithContext})**
 
-**Kevin's AI-generated preparation pack:**
-• **Focus Area**: ${contextLabel}
-• **Your Question**: "${query}"
-• **Suggested Duration**: ${context.suggestedDuration}
-• **Preparation Topics**: 
-${context.preparationNotes.map(note => `  - ${note}`).join('\n')}
+Here's what I've already prepared for your conversation:
+• **Your situation**: ${query}
+• **Meeting type**: ${contextLabel} (${context.suggestedDuration})
+• **What we'll cover**:
+${context.preparationNotes.map(note => `  ✓ ${note}`).join('\n')}
 
-💡 **Business Intelligence**: ${context.businessInsight}
+${context.businessInsight}
 
 **What happens next:**
-1. Choose your preferred time slot
-2. Receive calendar invite with prep materials  
-3. Kevin reviews AI-generated context before your call
-4. Get personalized guidance based on your specific situation
+1. Choose a time that works for you
+2. You'll get calendar details automatically
+3. Kevin will review everything beforehand so you don't have to repeat yourself
+4. Get real answers for your specific situation
 
-Need help preparing any specific questions for the consultation?`;
+Is there anything else about your situation you'd like me to make sure Kevin knows about before your meeting?`;
 }
 
 // Export analytics for dashboard/reporting

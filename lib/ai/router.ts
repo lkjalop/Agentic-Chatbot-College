@@ -264,7 +264,16 @@ export async function routeToAgent(query: string, intent: Intent): Promise<strin
       lowercaseQuery.includes('meet with') ||
       lowercaseQuery.includes('advisor') ||
       lowercaseQuery.includes('consultation') ||
-      lowercaseQuery.includes('schedule a meeting')) {
+      lowercaseQuery.includes('schedule a meeting') ||
+      lowercaseQuery.includes('opt application') ||
+      lowercaseQuery.includes('opt') ||
+      lowercaseQuery.includes('visa help') ||
+      lowercaseQuery.includes('need help with') ||
+      lowercaseQuery.includes('i need help with') ||
+      lowercaseQuery.includes('help with my') ||
+      lowercaseQuery.includes('application') ||
+      lowercaseQuery.includes('visa application') ||
+      lowercaseQuery.includes('immigration help')) {
     return 'booking';
   }
   
