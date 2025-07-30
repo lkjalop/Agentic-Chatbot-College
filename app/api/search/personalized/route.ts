@@ -244,7 +244,8 @@ async function generateAgentResponse(
     knowledge: `You are a Knowledge Agent. Based on this query: "${query}", provide concise career guidance in 1-2 sentences max. End with a question.`,
     schedule: `You are a Scheduling Agent. For the query: "${query}", provide brief scheduling advice in 1-2 sentences max. End with a question.`,
     cultural: `You are a Cultural Intelligence Agent. For the query: "${query}", provide brief culturally-aware guidance in 1-2 sentences max. End with a question.`,
-    voice: `You are a Voice Agent. For the query: "${query}", provide brief communication advice in 1-2 sentences max. End with a question.`
+    voice: `You are a Voice Agent. For the query: "${query}", provide brief communication advice in 1-2 sentences max. End with a question.`,
+    booking: `You are a Booking Agent. For the query: "${query}", help schedule appointments with advisors and provide intelligent context analysis. Use smart booking system.`
   };
 
   const prompt = agentPrompts[agent as keyof typeof agentPrompts] || agentPrompts.knowledge;
@@ -252,6 +253,17 @@ async function generateAgentResponse(
   // Add user context if available
   const userContext = user ? `User is a ${user.studentType} student interested in ${user.courseInterest}.` : '';
   
+  // Handle booking agent specially
+  if (agent === 'booking') {
+    try {
+      const { generateBookingResponse } = await import('@/lib/ai/agents/booking-agent');
+      return await generateBookingResponse(query);
+    } catch (error) {
+      console.error('Error generating booking response:', error);
+      return getFallbackResponse(query, agent);
+    }
+  }
+
   try {
     // Use the existing Groq service to generate response
     const { generateResponse } = await import('@/lib/ai/groq');
@@ -496,7 +508,9 @@ function getAgentSpecificFallbackResponse(query: string, agent: string): string 
 
     voice: `Let's improve your communication skills for interviews and presentations. Focus on speaking confidence or interview techniques?`,
 
-    knowledge: `I'll help with Business Analyst and Data Analyst career paths in Australia. Want to know key differences or required skills?`
+    knowledge: `I'll help with Business Analyst and Data Analyst career paths in Australia. Want to know key differences or required skills?`,
+
+    booking: `I'll help you schedule a consultation with Kevin for personalized career guidance. Let me analyze your needs and provide booking options with context.`
   };
 
   return responses[agent as keyof typeof responses] || responses.knowledge;

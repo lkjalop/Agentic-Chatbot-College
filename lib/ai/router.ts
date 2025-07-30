@@ -258,6 +258,16 @@ export class AgenticRouter {
 export async function routeToAgent(query: string, intent: Intent): Promise<string> {
   const lowercaseQuery = query.toLowerCase();
   
+  // Booking agent for appointment/advisor queries - MUST come before schedule
+  if (lowercaseQuery.includes('book') || 
+      lowercaseQuery.includes('appointment with') ||
+      lowercaseQuery.includes('meet with') ||
+      lowercaseQuery.includes('advisor') ||
+      lowercaseQuery.includes('consultation') ||
+      lowercaseQuery.includes('schedule a meeting')) {
+    return 'booking';
+  }
+  
   // Schedule agent for time/interview related queries
   if (lowercaseQuery.includes('interview') || 
       lowercaseQuery.includes('schedule') || 
