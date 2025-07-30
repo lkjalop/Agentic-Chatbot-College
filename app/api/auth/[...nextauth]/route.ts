@@ -8,9 +8,12 @@ import { eq } from "drizzle-orm";
 // Only use adapter if database is available and we have proper environment
 const getAdapter = () => {
   // Skip adapter during build time or when environment variables are missing
-  if (!process.env.NEON_DATABASE_URL || 
-      (process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV)) {
-    console.warn('Database not available or build time, running without adapter');
+  const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || 
+                      process.env.CI === 'true' ||
+                      (process.env.VERCEL && !process.env.VERCEL_ENV);
+  
+  if (!process.env.NEON_DATABASE_URL || isBuildTime) {
+    console.warn('Database not available or build time detected, running without adapter');
     return undefined;
   }
   

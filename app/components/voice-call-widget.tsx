@@ -128,10 +128,10 @@ export default function VoiceCallWidget({ trigger = 'floating', onCallInitiated,
         <button
           onClick={() => setShowCallDialog(true)}
           className={cn(
-            "fixed text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 z-40 flex items-center justify-center group bg-gradient-to-r from-orange-500 to-red-500",
+            "fixed text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center justify-center group bg-gradient-to-r from-orange-500 to-red-500",
             chatOpen 
-              ? "bottom-20 right-6 w-12 h-12 md:bottom-6 md:right-6 md:w-16 md:h-16" // Smaller on mobile when chat open, above input area
-              : "bottom-6 right-6 w-16 h-16" // Normal position when chat closed
+              ? "bottom-24 right-4 w-14 h-14 md:bottom-6 md:right-6 md:w-16 md:h-16 z-50 voice-call-widget-mobile" // Higher up on mobile when chat open
+              : "bottom-6 right-6 w-16 h-16 z-40" // Normal position when chat closed
           )}
           title="Call AI Assistant"
         >

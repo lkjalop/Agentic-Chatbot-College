@@ -99,6 +99,44 @@
   }
 }
 
+/* Mobile UI Fixes for overlapping icons */
+@media (max-width: 640px) {
+  /* Chat container needs padding to avoid icon overlap */
+  .chat-container {
+    padding-bottom: 120px !important;
+  }
+  
+  /* Fixed input area at bottom */
+  .chat-input-area {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid var(--ea-gray-border);
+    padding: 1rem;
+    padding-right: 5rem; /* Space for floating icons */
+    z-index: 30;
+  }
+  
+  /* Adjust floating icons positioning on mobile */
+  .voice-call-widget-mobile {
+    bottom: 5rem !important; /* Above input area */
+    right: 1rem !important;
+    z-index: 40;
+  }
+  
+  /* Prevent input field from being covered */
+  .mobile-safe-area {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  
+  /* Ensure messages don't get hidden behind input */
+  .messages-container {
+    padding-bottom: 100px;
+  }
+}
+
 @keyframes pulse-dot {
   0%, 60%, 100% {
     opacity: 1;
