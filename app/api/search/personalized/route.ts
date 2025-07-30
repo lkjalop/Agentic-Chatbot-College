@@ -241,10 +241,10 @@ async function generateAgentResponse(
   const context = searchResults.results?.slice(0, 3).map((r: any) => r.content).join('\n') || '';
   
   const agentPrompts = {
-    knowledge: `You are a Knowledge Agent specializing in career advice and industry insights. Based on this query: "${query}" and relevant information: "${context}", provide helpful career guidance.`,
-    schedule: `You are a Scheduling Agent helping with interview preparation and timeline management. For the query: "${query}", provide scheduling and time management advice.`,
-    cultural: `You are a Cultural Intelligence Agent helping international students. For the query: "${query}" with context: "${context}", provide culturally-aware career guidance.`,
-    voice: `You are a Voice Interaction Agent focused on communication skills. For the query: "${query}", provide advice on verbal communication and presentation skills.`
+    knowledge: `You are a Knowledge Agent. Based on this query: "${query}", provide concise career guidance in 1-2 sentences max. End with a question.`,
+    schedule: `You are a Scheduling Agent. For the query: "${query}", provide brief scheduling advice in 1-2 sentences max. End with a question.`,
+    cultural: `You are a Cultural Intelligence Agent. For the query: "${query}", provide brief culturally-aware guidance in 1-2 sentences max. End with a question.`,
+    voice: `You are a Voice Agent. For the query: "${query}", provide brief communication advice in 1-2 sentences max. End with a question.`
   };
 
   const prompt = agentPrompts[agent as keyof typeof agentPrompts] || agentPrompts.knowledge;
@@ -266,10 +266,10 @@ async function generateAgentResponse(
 
 function getFallbackResponse(query: string, agent: string): string {
   const fallbacks = {
-    knowledge: "Based on current market trends, I recommend focusing on developing skills that align with your career goals. Would you like me to help you create a personalized learning plan?",
-    schedule: "I can help you create a structured approach to your career preparation. Let's start by identifying your key milestones and deadlines.",
-    cultural: "I understand the unique challenges you face as an international student. Let me provide some culturally-aware guidance for your career development.",
-    voice: "Communication skills are crucial for career success. I'd be happy to help you practice and improve your verbal presentation abilities."
+    knowledge: "I'll help develop skills for your career goals. Want a learning plan?",
+    schedule: "I'll structure your career timeline. Identify key milestones?",
+    cultural: "I'll provide guidance for international students. Need specific advice?",
+    voice: "Let's improve your communication skills. Ready to practice?"
   };
   
   return fallbacks[agent as keyof typeof fallbacks] || fallbacks.knowledge;
@@ -490,42 +490,13 @@ function getSimpleAgentRouting(query: string): string {
 
 function getAgentSpecificFallbackResponse(query: string, agent: string): string {
   const responses = {
-    schedule: `I'd be happy to help you with scheduling! For course scheduling and appointments, you can reach out to our academic advisors who can assist with:
+    schedule: `I can help schedule appointments with advisors for courses or career guidance. What time works best?`,
 
-• Setting up calls about data analytics or cybersecurity courses
-• Interview preparation sessions  
-• Career guidance appointments
-• Course enrollment consultations
+    cultural: `I understand visa and cultural challenges for international students. Need 485 visa advice or workplace tips?`,
 
-Would you like me to provide information about our course offerings or help you understand the next steps for getting started?`,
+    voice: `Let's improve your communication skills for interviews and presentations. Focus on speaking confidence or interview techniques?`,
 
-    cultural: `As someone working with international students, I understand the challenges you're facing with visa requirements and career planning. Here's what I can help with:
-
-• Visa timeline planning (485 post-study work visa guidance)
-• Understanding Australian job market requirements
-• Cultural adaptation strategies for the workplace
-• International student support resources
-
-Many of our students face similar visa pressures. Would you like specific guidance on managing your career search within your visa timeframe?`,
-
-    voice: `Communication skills are crucial for career success! I can help you with:
-
-• Interview presentation techniques
-• Professional communication strategies
-• Public speaking confidence building
-• Technical interview communication skills
-
-What specific aspect of communication would you like to work on? Interview skills, presentation abilities, or professional networking?`,
-
-    knowledge: `I'm here to help with your career development! Based on your question about data or business analyst roles, here's what I can offer:
-
-• Business Analyst vs Data Analyst career paths comparison  
-• Skills required for each role
-• Portfolio development guidance
-• Job search strategies in Australia
-• Industry trends and opportunities
-
-Data Analytics and Business Analysis are both excellent career paths with strong job prospects. Would you like me to break down the differences and help you determine which might be the better fit for your background and goals?`
+    knowledge: `I'll help with Business Analyst and Data Analyst career paths in Australia. Want to know key differences or required skills?`
   };
 
   return responses[agent as keyof typeof responses] || responses.knowledge;

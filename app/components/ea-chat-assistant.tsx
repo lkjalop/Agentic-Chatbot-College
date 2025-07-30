@@ -31,21 +31,22 @@ interface ChatSession {
 
 export function EAChatAssistant() {
   const { data: session } = useSession();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDiagnosticOpen, setIsDiagnosticOpen] = useState(false);
+  const [showDiagnosticInfo, setShowDiagnosticInfo] = useState(false);
   const [isVoiceRecording, setIsVoiceRecording] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       type: 'assistant',
-      content: "Welcome! I'm your AI career assistant, powered by advanced context-aware technology. I'm here to help you navigate your career journey with personalized guidance tailored specifically to your goals and experience.",
+      content: "Welcome! I'm your AI career assistant, ready to help with personalized guidance.",
       timestamp: new Date()
     },
     {
       id: '2',
       type: 'assistant',
-      content: "How can I help you today? Whether it's resume optimization, interview preparation, job search strategies, or career planning, I'm here to provide expert guidance every step of the way.",
+      content: "How can I help today? Ask about resumes, interviews, job search, or career planning.",
       timestamp: new Date()
     }
   ]);
@@ -81,7 +82,7 @@ export function EAChatAssistant() {
     onResult: (transcript, isFinal) => {
       if (isFinal) {
         setInputValue(transcript);
-        setIsVoiceRecording(false);
+        stopListening();
       }
     }
   });
@@ -190,17 +191,12 @@ export function EAChatAssistant() {
     }
   };
 
-  const startVoiceRecording = () => {
-    setIsVoiceRecording(true);
-    resetTranscript();
-    startListening();
-  };
-
-  const stopVoiceRecording = () => {
-    setIsVoiceRecording(false);
-    stopListening();
-    if (transcript) {
-      setInputValue(transcript);
+  const toggleVoiceRecording = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      resetTranscript();
+      startListening();
     }
   };
 
@@ -260,9 +256,9 @@ export function EAChatAssistant() {
       {/* Floating Action Buttons */}
       <div className="fixed bottom-8 right-[5%] flex items-center gap-4 z-50">
         <button
-          onClick={startVoiceRecording}
+          onClick={toggleVoiceRecording}
           className="w-15 h-15 bg-[--ea-orange] hover:bg-[--ea-orange-dark] text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 flex items-center justify-center"
-          aria-label="Start voice conversation"
+          aria-label={isListening ? "Stop voice recording" : "Start voice conversation"}
         >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
@@ -357,7 +353,13 @@ export function EAChatAssistant() {
                 <div className="flex items-center gap-2">
                   {/* Diagnostic Toggle */}
                   <button
-                    onClick={() => setIsDiagnosticOpen(!isDiagnosticOpen)}
+                    onClick={() => {
+                      if (!isDiagnosticOpen && !showDiagnosticInfo) {
+                        setShowDiagnosticInfo(true);
+                        setTimeout(() => setShowDiagnosticInfo(false), 5000);
+                      }
+                      setIsDiagnosticOpen(!isDiagnosticOpen);
+                    }}
                     className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${
                       isDiagnosticOpen 
                         ? 'bg-[--ea-orange] text-white' 
@@ -365,9 +367,25 @@ export function EAChatAssistant() {
                     }`}
                     title="Under the Hood - See how AI thinks"
                   >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="3"/>
-                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      {/* Half gear on left */}
+                      <g clipPath="url(#leftHalf)">
+                        <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" strokeWidth="2"/>
+                      </g>
+                      {/* Robot face on right */}
+                      <g transform="translate(12,0)">
+                        <rect x="1" y="6" width="10" height="8" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                        <circle cx="3.5" cy="9" r="1" fill="currentColor"/>
+                        <circle cx="8.5" cy="9" r="1" fill="currentColor"/>
+                        <rect x="4" y="11" width="4" height="1" rx="0.5" fill="currentColor"/>
+                        <rect x="5" y="4" width="2" height="2" rx="0.5" stroke="currentColor" strokeWidth="1" fill="none"/>
+                      </g>
+                      <defs>
+                        <clipPath id="leftHalf">
+                          <rect x="0" y="0" width="12" height="24"/>
+                        </clipPath>
+                      </defs>
                     </svg>
                   </button>
                   <button
@@ -447,6 +465,19 @@ export function EAChatAssistant() {
                   <div ref={messagesEndRef} />
                 </div>
 
+                {/* Info Popup for Under the Hood */}
+                {showDiagnosticInfo && (
+                  <div className="absolute top-20 right-4 bg-[--ea-navy] text-white p-4 rounded-lg shadow-lg max-w-sm z-50">
+                    <p className="text-sm">
+                      The <strong>Under the Hood</strong> panel showcases our AI's dynamic architecture. 
+                      Watch how agents and personas change based on your questions to provide targeted assistance!
+                    </p>
+                    <div className="mt-2 text-xs text-gray-300">
+                      Click the gear icon to toggle this panel
+                    </div>
+                  </div>
+                )}
+
                 {/* Diagnostic Panel */}
                 {isDiagnosticOpen && (
                   <div className="w-80 border-l border-gray-200 bg-gray-50 flex flex-col">
@@ -485,9 +516,22 @@ export function EAChatAssistant() {
                                 Persona Match
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-[--ea-text-primary]">
-                                  {message.diagnostics.personaMatch.name}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  {/* Gender-based avatar */}
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white ${
+                                    ['Priya', 'Li Wen', 'Sarah', 'Sadia', 'Hanh', 'Aarti', 'Amina', 'Mey Lin', 'Camila', 'Chelsea', 'Farah', 'Dr. Anjali'].some(
+                                      name => message.diagnostics?.personaMatch?.name?.includes(name)
+                                    ) ? 'bg-[--ea-orange]' : 'bg-[--ea-navy]'
+                                  }`}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                      <circle cx="12" cy="8" r="3"/>
+                                      <path d="M16 14h-8a4 4 0 0 0-4 4v2h16v-2a4 4 0 0 0-4-4z"/>
+                                    </svg>
+                                  </div>
+                                  <span className="text-sm font-medium text-[--ea-text-primary]">
+                                    {message.diagnostics.personaMatch.name}
+                                  </span>
+                                </div>
                                 <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                                   {message.diagnostics.personaMatch.similarity}%
                                 </span>
@@ -525,6 +569,12 @@ export function EAChatAssistant() {
 
               {/* Input Area */}
               <div className="p-5 border-t border-gray-200 bg-white chat-input-area">
+                {isListening && (
+                  <div className="max-w-4xl mx-auto mb-2 flex items-center gap-2 text-sm text-[--ea-orange] font-medium">
+                    <div className="w-2 h-2 bg-[--ea-orange] rounded-full animate-pulse"></div>
+                    Listening... (speak naturally)
+                  </div>
+                )}
                 <div className="max-w-4xl mx-auto flex items-end gap-3 bg-gray-50 border-2 border-gray-200 rounded-xl p-2 focus-within:border-[--ea-orange] focus-within:bg-white transition-all duration-200 mobile-safe-area">
                   <textarea
                     ref={textareaRef}
@@ -540,13 +590,20 @@ export function EAChatAssistant() {
                   />
                   <div className="flex gap-1.5 pb-1">
                     <button
-                      onClick={startVoiceRecording}
-                      className="w-10 h-10 bg-[--ea-orange] hover:bg-[--ea-orange-dark] text-white rounded-lg flex items-center justify-center transition-all duration-200 hover:-translate-y-0.5"
+                      onClick={toggleVoiceRecording}
+                      className={`w-10 h-10 ${isListening ? 'bg-red-500 hover:bg-red-600' : 'bg-[--ea-orange] hover:bg-[--ea-orange-dark]'} text-white rounded-lg flex items-center justify-center transition-all duration-200 hover:-translate-y-0.5`}
+                      title={isListening ? 'Stop Listening' : 'Start Voice Input'}
                     >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                      </svg>
+                      {isListening ? (
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                          <rect x="6" y="6" width="12" height="12" rx="2"/>
+                        </svg>
+                      ) : (
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        </svg>
+                      )}
                     </button>
                     <button
                       onClick={sendMessage}
@@ -565,36 +622,6 @@ export function EAChatAssistant() {
         </>
       )}
 
-      {/* Voice Recording Overlay */}
-      {isVoiceRecording && (
-        <div className="fixed inset-0 bg-[--ea-navy] flex items-center justify-center flex-col gap-10 z-[3000] text-white">
-          <div className="w-40 h-40 bg-[--ea-orange] bg-opacity-20 rounded-full flex items-center justify-center relative">
-            <div className="w-20 h-20 bg-[--ea-orange] rounded-full relative z-10"></div>
-            <div className="absolute inset-[-20px] border-3 border-[--ea-orange] rounded-full animate-ping"></div>
-          </div>
-          <div className="text-center">
-            <h2 className="text-3xl font-bold mb-2">Listening...</h2>
-            <p className="text-lg opacity-80">Speak naturally, I'm processing your context</p>
-          </div>
-          <div className="flex gap-5">
-            <button
-              onClick={() => {
-                setIsVoiceRecording(false);
-                stopListening();
-              }}
-              className="px-10 py-4 bg-white bg-opacity-10 border-2 border-white border-opacity-30 rounded-full text-white text-lg font-medium hover:bg-opacity-20 hover:border-opacity-50 transition-all duration-200 hover:-translate-y-0.5"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={stopVoiceRecording}
-              className="px-10 py-4 bg-white bg-opacity-10 border-2 border-white border-opacity-30 rounded-full text-white text-lg font-medium hover:bg-opacity-20 hover:border-opacity-50 transition-all duration-200 hover:-translate-y-0.5"
-            >
-              Stop & Send
-            </button>
-          </div>
-        </div>
-      )}
 
       <style jsx>{`
         .animation-delay-200 {

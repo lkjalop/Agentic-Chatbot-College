@@ -67,12 +67,22 @@ export function useVoiceRecognition(options: UseVoiceOptions = {}) {
     };
 
     recognition.onend = () => {
-      setIsListening(false);
+      // Restart recognition if it was stopped due to silence
+      if (options.continuous && isListening) {
+        try {
+          recognition.start();
+        } catch (error) {
+          // Ignore if already started
+          console.log('Recognition auto-restart attempted');
+        }
+      } else {
+        setIsListening(false);
+      }
     };
 
     recognition.start();
     recognitionRef.current = recognition;
-  }, [isSupported, options]);
+  }, [isSupported, options, isListening]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
