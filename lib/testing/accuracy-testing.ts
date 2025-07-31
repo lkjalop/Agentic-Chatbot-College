@@ -295,4 +295,4 @@ ${personaResults.failedTests.map((test: any) =>
 }
 
 // EXPORT FOR TESTING SCRIPT
-export { TestCase, TestResult, AccuracyReport };
+export type { TestCase, TestResult, AccuracyReport };
