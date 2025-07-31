@@ -322,6 +322,18 @@ Rather than building another general-purpose chatbot, focused on:
 - Mobile-responsive design
 - Google OAuth integration
 
+## 📋 Additional Documentation
+
+**For Technical Implementation:**
+- `lib/testing/` - Comprehensive testing framework
+- `SIMULATED_TESTING_RESULTS.md` - Honest accuracy validation
+- `TESTING_REALITY_CHECK.md` - Real-world vs simulated performance analysis
+
+**For Business Deployment:**
+- `CLIENT_DEPLOYMENT_STRATEGY.md` - SME university scaling architecture
+- Production-ready deployment guides and cost analysis
+- Security microsegmentation and compliance frameworks
+
 ---
 
 *This project demonstrates practical AI system architecture with honest performance validation and transparent decision-making. Built to explore modern AI patterns while maintaining focus on real-world applicability and user trust.*
