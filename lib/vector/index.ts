@@ -7,7 +7,7 @@ export function getVectorIndex(): Index {
   if (!vectorIndex) {
     if (!process.env.UPSTASH_VECTOR_REST_URL || !process.env.UPSTASH_VECTOR_REST_TOKEN) {
       // During build time, return a mock for static generation
-      if (process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV) {
+      if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
         console.warn('Upstash Vector environment variables not defined, using mock for build');
         return createMockVectorIndex();
       }

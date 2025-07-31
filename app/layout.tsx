@@ -12,6 +12,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'Employability Advantage - AI Career Assistant',
   description: 'Transform your career with AI-powered coaching, personalized guidance, and job-ready skills development.',
+  viewport: 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no',
 };
 
 export default function RootLayout({

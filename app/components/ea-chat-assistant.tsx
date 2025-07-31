@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { AnalyticsService } from '@/lib/analytics/analytics-service';
 import { useVoiceRecognition, useTextToSpeech } from '@/lib/hooks/use-voice';
+import { ScheduleButton, extractCalendlyUrl, removeCalendlyUrl } from './schedule-button';
 
 interface Message {
   id: string;
@@ -215,9 +216,9 @@ export function EAChatAssistant() {
   return (
     <>
       {/* Landing Page Content */}
-      <div className="min-h-screen flex items-center justify-center px-5 py-10 text-center">
+      <div className="landing-page min-h-screen flex items-center justify-center px-5 py-10 text-center">
         <div>
-          <h1 className="text-4xl md:text-6xl font-bold text-[--ea-navy] mb-6 leading-tight">
+          <h1 className="text-4xl md:text-6xl font-bold text-[--ea-navy] mb-6 leading-tight landing-heading">
             We're here to help you<br />see the <span className="text-[--ea-orange] underline decoration-[--ea-orange] underline-offset-8 decoration-4">bigger picture.</span>
           </h1>
           <p className="text-lg md:text-xl text-[--ea-text-secondary] max-w-2xl mx-auto mb-12 leading-relaxed">
@@ -254,7 +255,7 @@ export function EAChatAssistant() {
       </div>
 
       {/* Floating Action Buttons */}
-      <div className="fixed bottom-8 right-[5%] flex items-center gap-4 z-50">
+      <div className="fixed bottom-8 right-[5%] flex items-center gap-4 z-50 floating-action-buttons">
         <button
           onClick={toggleVoiceRecording}
           className="w-15 h-15 bg-[--ea-orange] hover:bg-[--ea-orange-dark] text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 flex items-center justify-center"
@@ -421,24 +422,39 @@ export function EAChatAssistant() {
                         )}
                       </div>
                       <div className="flex-1">
-                        <div className="text-[15px] leading-relaxed text-[--ea-text-primary]">
-                          {message.content}
+                        <div className="text-[15px] leading-relaxed text-[--ea-text-primary] message-content">
+                          {(() => {
+                            const calendlyUrl = extractCalendlyUrl(message.content);
+                            if (calendlyUrl && message.type === 'assistant') {
+                              return removeCalendlyUrl(message.content);
+                            }
+                            return message.content;
+                          })()}
                         </div>
                         {message.type === 'assistant' && (
-                          <div className="flex items-center gap-2 mt-2">
-                            <button
-                              onClick={() => speak(message.content)}
-                              className="text-xs text-[--ea-text-secondary] hover:text-[--ea-orange] flex items-center gap-1 transition-colors duration-200"
-                              title="Read aloud"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-                              </svg>
-                              Listen
-                            </button>
-                          </div>
+                          <>
+                            {(() => {
+                              const calendlyUrl = extractCalendlyUrl(message.content);
+                              if (calendlyUrl) {
+                                return <ScheduleButton calendlyUrl={calendlyUrl} />;
+                              }
+                              return null;
+                            })()}
+                            <div className="flex items-center gap-2 mt-2">
+                              <button
+                                onClick={() => speak(message.content)}
+                                className="text-xs text-[--ea-text-secondary] hover:text-[--ea-orange] flex items-center gap-1 transition-colors duration-200"
+                                title="Read aloud"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                                </svg>
+                                Listen
+                              </button>
+                            </div>
+                          </>
                         )}
                       </div>
                     </div>
@@ -480,18 +496,30 @@ export function EAChatAssistant() {
 
                 {/* Diagnostic Panel */}
                 {isDiagnosticOpen && (
-                  <div className="w-80 border-l border-gray-200 bg-gray-50 flex flex-col">
-                    <div className="p-4 border-b border-gray-200 bg-white">
-                      <h3 className="font-semibold text-[--ea-text-primary] flex items-center gap-2">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="12" cy="12" r="3"/>
-                          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                  <div className="w-80 border-l border-gray-200 bg-gray-50 flex flex-col md:relative fixed md:position-static top-0 right-0 bottom-0 md:w-80 w-full z-50 md:z-auto">
+                    <div className="p-4 border-b border-gray-200 bg-white flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-[--ea-text-primary] flex items-center gap-2">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                          </svg>
+                          Under the Hood
+                        </h3>
+                        <p className="text-xs text-[--ea-text-secondary] mt-1">
+                          See how the AI processes your questions
+                        </p>
+                      </div>
+                      {/* Mobile close button */}
+                      <button
+                        onClick={() => setIsDiagnosticOpen(false)}
+                        className="md:hidden w-10 h-10 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors duration-200 text-[--ea-text-secondary]"
+                        aria-label="Close Under the Hood panel"
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M18 6L6 18M6 6l12 12"/>
                         </svg>
-                        Under the Hood
-                      </h3>
-                      <p className="text-xs text-[--ea-text-secondary] mt-1">
-                        See how the AI processes your questions
-                      </p>
+                      </button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
                       {messages.filter(m => m.type === 'assistant' && m.diagnostics).slice(-1).map((message) => (

@@ -99,7 +99,88 @@
   }
 }
 
-/* Mobile UI Fixes for overlapping icons */
+/* Mobile UI Fixes - Comprehensive Breakpoints */
+
+/* Standard mobile devices */
+@media (max-width: 480px) {
+  /* Landing page mobile fixes */
+  .landing-page h1 {
+    font-size: 2rem !important;
+    line-height: 1.2 !important;
+  }
+  
+  .landing-page p {
+    font-size: 1rem !important;
+  }
+  
+  /* Floating buttons positioning */
+  .fixed.bottom-8.right-\\[5\\%\\] {
+    right: 1rem !important;
+    bottom: 2rem !important;
+  }
+}
+
+/* Large mobile devices (Samsung Galaxy Ultra, etc) */
+@media (max-width: 768px) {
+  /* Chat container mobile layout */
+  .fixed.top-0.right-\\[10\\%\\].bottom-0.w-\\[70\\%\\] {
+    right: 0 !important;
+    width: 100% !important;
+    left: 0 !important;
+  }
+  
+  /* Under the Hood panel mobile behavior */
+  .diagnostic-panel-mobile {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    z-index: 60;
+  }
+  
+  /* Schedule button mobile styling */
+  .schedule-button-mobile {
+    width: 100%;
+    max-width: 200px;
+    margin-left: auto;
+  }
+}
+
+/* Samsung Galaxy Ultra specific (tall screens) */
+@media (max-width: 480px) and (min-height: 900px) {
+  /* Adjust for extra tall screens */
+  .landing-page {
+    min-height: 100svh; /* Use small viewport height */
+    padding-top: 2rem;
+    padding-bottom: 6rem; /* Extra space for floating buttons */
+  }
+  
+  /* Ensure buttons are always visible */
+  .floating-action-buttons {
+    position: fixed !important;
+    bottom: env(safe-area-inset-bottom, 20px) !important;
+  }
+}
+
+/* iPhone Pro Max equivalent */
+@media (max-width: 428px) and (min-height: 926px) {
+  /* Similar adjustments for iPhone Pro Max */
+  .landing-page {
+    padding-bottom: 6rem;
+  }
+}
+
+/* Tablet breakpoint */
+@media (max-width: 1024px) {
+  /* Sidebar behavior on tablets */
+  .sidebar-tablet {
+    width: 280px;
+  }
+}
+
+/* Original mobile fixes enhanced */
 @media (max-width: 640px) {
   /* Chat container needs padding to avoid icon overlap */
   .chat-container {
@@ -134,6 +215,19 @@
   /* Ensure messages don't get hidden behind input */
   .messages-container {
     padding-bottom: 100px;
+  }
+  
+  /* Touch-friendly button sizing */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Prevent horizontal scroll from long links */
+  .message-content {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
   }
 }
 
