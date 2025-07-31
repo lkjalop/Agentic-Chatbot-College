@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { AnalyticsService } from '@/lib/analytics/analytics-service';
 import { useVoiceRecognition, useTextToSpeech } from '@/lib/hooks/use-voice';
@@ -105,7 +105,7 @@ export function EAChatAssistant() {
     }
   };
 
-  const sendMessage = async () => {
+  const sendMessage = useCallback(async () => {
     if (!inputValue.trim()) return;
 
     const userMessage: Message = {
@@ -183,7 +183,7 @@ export function EAChatAssistant() {
     } finally {
       setIsTyping(false);
     }
-  };
+  }, [inputValue, session?.user?.id]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -192,16 +192,16 @@ export function EAChatAssistant() {
     }
   };
 
-  const toggleVoiceRecording = () => {
+  const toggleVoiceRecording = useCallback(() => {
     if (isListening) {
       stopListening();
     } else {
       resetTranscript();
       startListening();
     }
-  };
+  }, [isListening, stopListening, resetTranscript, startListening]);
 
-  const startNewChat = () => {
+  const startNewChat = useCallback(() => {
     setMessages([
       {
         id: Date.now().toString(),
@@ -211,7 +211,7 @@ export function EAChatAssistant() {
       }
     ]);
     setIsSidebarOpen(false);
-  };
+  }, []);
 
   return (
     <>
@@ -258,7 +258,7 @@ export function EAChatAssistant() {
       <div className="fixed bottom-8 right-[5%] flex items-center gap-4 z-50 floating-action-buttons">
         <button
           onClick={toggleVoiceRecording}
-          className="w-15 h-15 bg-[--ea-orange] hover:bg-[--ea-orange-dark] text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 flex items-center justify-center"
+          className="ea-floating-button bg-[--ea-orange] hover:bg-[--ea-orange-dark] text-white"
           aria-label={isListening ? "Stop voice recording" : "Start voice conversation"}
         >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -268,7 +268,7 @@ export function EAChatAssistant() {
         </button>
         <button
           onClick={() => setIsOpen(true)}
-          className="w-15 h-15 bg-[--ea-navy] hover:bg-[--ea-navy-dark] text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 flex items-center justify-center relative overflow-hidden before:absolute before:inset-0 before:bg-[--ea-navy] before:rounded-full before:scale-90 before:opacity-70 before:animate-pulse"
+          className="ea-floating-button bg-[--ea-navy] hover:bg-[--ea-navy-dark] text-white relative overflow-hidden before:absolute before:inset-0 before:bg-[--ea-navy] before:rounded-full before:scale-90 before:opacity-70 before:animate-pulse"
           aria-label="Open chat assistant"
         >
           <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
@@ -405,10 +405,10 @@ export function EAChatAssistant() {
                 <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col gap-6 messages-container">
                   {messages.map((message) => (
                     <div key={message.id} className={`flex gap-4 max-w-4xl w-full ${message.type === 'user' ? 'self-end flex-row-reverse' : 'self-start'}`}>
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 font-medium ${
+                      <div className={`flex-shrink-0 font-medium ${
                         message.type === 'assistant' 
-                          ? 'bg-[--ea-navy] text-white' 
-                          : 'bg-gray-200 text-[--ea-text-primary]'
+                          ? 'ea-avatar-assistant' 
+                          : 'ea-avatar-user'
                       }`}>
                         {message.type === 'assistant' ? (
                           <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
@@ -422,7 +422,7 @@ export function EAChatAssistant() {
                         )}
                       </div>
                       <div className="flex-1">
-                        <div className="text-[15px] leading-relaxed text-[--ea-text-primary] message-content">
+                        <div className="ea-message-bubble">
                           {(() => {
                             const calendlyUrl = extractCalendlyUrl(message.content);
                             if (calendlyUrl && message.type === 'assistant') {
@@ -496,7 +496,7 @@ export function EAChatAssistant() {
 
                 {/* Diagnostic Panel */}
                 {isDiagnosticOpen && (
-                  <div className="w-80 border-l border-gray-200 bg-gray-50 flex flex-col md:relative fixed md:position-static top-0 right-0 bottom-0 md:w-80 w-full z-50 md:z-auto">
+                  <div className="ea-diagnostic-panel">
                     <div className="p-4 border-b border-gray-200 bg-white flex items-center justify-between">
                       <div>
                         <h3 className="font-semibold text-[--ea-text-primary] flex items-center gap-2">
@@ -613,7 +613,7 @@ export function EAChatAssistant() {
                     }}
                     onKeyDown={handleKeyDown}
                     placeholder="Type your message..."
-                    className="flex-1 border-none bg-transparent outline-none text-[15px] text-[--ea-text-primary] placeholder-[--ea-text-secondary] px-4 py-3 resize-none min-h-6 max-h-30"
+                    className="ea-input-field"
                     rows={1}
                   />
                   <div className="flex gap-1.5 pb-1">
