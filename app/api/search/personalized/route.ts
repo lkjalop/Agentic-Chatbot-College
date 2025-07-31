@@ -8,6 +8,7 @@ import { searchVectors } from '@/lib/vector';
 import { analyzeIntent } from '@/lib/ai/groq';
 import { routeToAgent } from '@/lib/ai/router';
 import { batchUpsertVectors, VectorMetadata } from '@/lib/vector';
+import { cache, createCacheKey, hashObject } from '@/lib/utils/cache';
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,12 +70,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Analyze intent and route to appropriate agent with fallback
+    // Analyze intent and route to appropriate agent with caching
     let intent, selectedAgent;
     try {
-      intent = await analyzeIntent(query);
-      selectedAgent = agent || await routeToAgent(query, intent);
-      console.log(`Intent: ${intent.type}, Agent: ${selectedAgent}`);
+      const cacheKey = createCacheKey('intent', hashObject(query));
+      const cachedIntent = cache.get<{intent: any, selectedAgent: string}>(cacheKey);
+      
+      if (cachedIntent) {
+        intent = cachedIntent.intent;
+        selectedAgent = agent || cachedIntent.selectedAgent;
+        console.log(`Using cached intent: ${intent.type}, Agent: ${selectedAgent}`);
+      } else {
+        intent = await analyzeIntent(query);
+        selectedAgent = agent || await routeToAgent(query, intent);
+        
+        // Cache the result for 10 minutes
+        cache.set(cacheKey, { intent, selectedAgent }, 600000);
+        console.log(`Intent: ${intent.type}, Agent: ${selectedAgent}`);
+      }
     } catch (error) {
       console.warn('Intent analysis failed, using fallback:', error);
       // Fallback intent and agent routing
@@ -88,18 +101,31 @@ export async function POST(request: NextRequest) {
       selectedAgent = getSimpleAgentRouting(query);
     }
     
-    // Perform vector search with fallback
+    // Perform vector search with caching
     let searchResults;
     try {
-      searchResults = await searchVectors({
-        query,
-        limit: limit * 2,
-        filter: {
-          // Remove agent filter temporarily to get better results
-          ...filters
+      const vectorCacheKey = createCacheKey('vector', hashObject({ query, limit, filters }));
+      const cachedResults = cache.get<any>(vectorCacheKey);
+      
+      if (cachedResults) {
+        searchResults = cachedResults;
+        console.log(`Using cached vector search: ${searchResults.results?.length || 0} results`);
+      } else {
+        searchResults = await searchVectors({
+          query,
+          limit: limit * 2,
+          filter: {
+            // Remove agent filter temporarily to get better results
+            ...filters
+          }
+        });
+        
+        // Cache successful results for 15 minutes
+        if (searchResults.success && searchResults.results?.length > 0) {
+          cache.set(vectorCacheKey, searchResults, 900000);
         }
-      });
-      console.log(`Vector search returned ${searchResults.results?.length || 0} results`);
+        console.log(`Vector search returned ${searchResults.results?.length || 0} results`);
+      }
     } catch (error) {
       console.warn('Vector search failed, using fallback data:', error);
       searchResults = {
