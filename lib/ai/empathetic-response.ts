@@ -43,6 +43,9 @@ export async function generateEmpatheticResponse({
     // Post-process for persona-specific enhancements
     response = await enhanceResponseForPersona(response, personaDetection);
 
+    // Ensure mandatory information is included
+    response = ensureMandatoryInfo(response);
+
     return response;
   } catch (error) {
     console.error('Empathetic response generation error:', error);
@@ -70,7 +73,14 @@ YOUR APPROACH:
 - Give specific info about the relevant track(s)
 - If unsure, help them compare options
 - Conversational tone (like talking to a friend)
-- Always end with clear next step (book consultation or enroll)`;
+- ALWAYS mention pricing ($740 AUD or $185/week payment plans)
+- ALWAYS mention timeline (4 weeks)
+- Always end with clear next step (book consultation or enroll)
+
+MANDATORY: Every response MUST include:
+1. Specific pricing: "$740 AUD" or "$185/week payment plans"
+2. Timeline: "4 weeks" or "4-week bootcamp"
+3. Clear next step: "book a consultation" or "enroll now"`;
 
   // Persona-specific context
   if (persona?.archetypeName) {
@@ -271,4 +281,41 @@ export function analyzeResponseNeeds(detection: PersonaDetectionResult): {
   }
   
   return { tone, priorities, specialConsiderations };
+}
+
+// Ensure mandatory information is included in every response
+function ensureMandatoryInfo(response: string): string {
+  let enhanced = response;
+  
+  // Check if pricing is mentioned
+  const hasPricing = enhanced.includes('$740') || enhanced.includes('$185');
+  
+  // Check if timeline is mentioned
+  const hasTimeline = enhanced.includes('4 week') || enhanced.includes('4-week');
+  
+  // Check if next step is mentioned
+  const hasNextStep = enhanced.includes('book') || enhanced.includes('consultation') || 
+                     enhanced.includes('enroll') || enhanced.includes('chat') || 
+                     enhanced.includes('call') || enhanced.includes('speak');
+  
+  // Add missing information
+  if (!hasPricing || !hasTimeline || !hasNextStep) {
+    let addendum = '';
+    
+    if (!hasPricing && !hasTimeline) {
+      addendum = '\n\nThe bootcamp is 4 weeks and costs $740 AUD (or $185/week payment plan).';
+    } else if (!hasPricing) {
+      addendum = '\n\nIt costs $740 AUD (or $185/week payment plan).';
+    } else if (!hasTimeline) {
+      addendum = '\n\nThe bootcamp is 4 weeks.';
+    }
+    
+    if (!hasNextStep) {
+      addendum += ' Want to book a quick consultation to see if it\'s right for you?';
+    }
+    
+    enhanced += addendum;
+  }
+  
+  return enhanced;
 }
