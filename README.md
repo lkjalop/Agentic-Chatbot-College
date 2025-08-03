@@ -739,15 +739,15 @@ Rather than building another general-purpose chatbot, focused on:
 
 ## 📋 Additional Documentation
 
-**For Technical Implementation:**
-- `lib/testing/` - Comprehensive testing framework
-- `SIMULATED_TESTING_RESULTS.md` - Honest accuracy validation
-- `TESTING_REALITY_CHECK.md` - Real-world vs simulated performance analysis
+**Quick Start:**
+- [QUICK_DEMO_SETUP.md](./QUICK_DEMO_SETUP.md) - 5-minute setup guide
+- [RESUME_TALKING_POINTS.md](./RESUME_TALKING_POINTS.md) - Interview presentation guide
 
-**For Business Deployment:**
-- `CLIENT_DEPLOYMENT_STRATEGY.md` - SME university scaling architecture
-- Production-ready deployment guides and cost analysis
-- Security microsegmentation and compliance frameworks
+**Complete Documentation:**
+- [docs/](./docs/) - Full technical and business documentation index
+- [docs/DEVELOPER_GUIDE.md](./docs/DEVELOPER_GUIDE.md) - Code review guide for developers
+- [docs/HIRING_MANAGER_DEMO_GUIDE.md](./docs/HIRING_MANAGER_DEMO_GUIDE.md) - Business demo guide
+- [docs/SECURITY_ARCHITECTURE.md](./docs/SECURITY_ARCHITECTURE.md) - Security implementation deep dive
 
 ---
 
