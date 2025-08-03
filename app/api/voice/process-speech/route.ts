@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import twilio from 'twilio';
 import { searchVectors } from '@/lib/vector';
 import { PersonalizedSearchService } from '@/lib/search/personalized-search';
+import { BasicSecurityAgent } from '@/lib/security/basic-security-agent';
+import { AgenticRouter } from '@/lib/ai/router';
 
 const VoiceResponse = twilio.twiml.VoiceResponse;
+const security = new BasicSecurityAgent();
+const router = new AgenticRouter();
 
 // Store conversation context per call (in production, use Redis or database)
 const conversations = new Map<string, Array<{ role: string; content: string; timestamp: Date }>>();
@@ -28,45 +32,103 @@ function cleanTextForSpeech(text: string): string {
     .substring(0, 1000);
 }
 
-// Get AI response using existing search system
+// Enhanced AI response using multi-agent routing
 async function getAIResponse(userInput: string, conversationContext: Array<{ role: string; content: string }>): Promise<string> {
   try {
-    // Use the existing search system
+    console.log(`🤖 Processing with multi-agent router: "${userInput}"`);
+    
+    // Use the enhanced router system
+    const routerResult = await router.route(userInput);
+    const intent = routerResult.intent;
+    const results = routerResult.results;
+    
+    console.log(`🎯 Intent detected: ${intent.type} (confidence: ${intent.confidence})`);
+    
+    if (!results || results.length === 0) {
+      return generateFallbackResponse(intent.type || 'general');
+    }
+
+    // Generate agent-specific responses based on intent
+    return generateAgentResponse(intent, results, userInput);
+
+  } catch (error) {
+    console.error('Error in multi-agent processing:', error);
+    // Fallback to simple search
+    return await getSimpleResponse(userInput);
+  }
+}
+
+// Generate responses based on agent type/intent
+function generateAgentResponse(intent: any, results: any[], userInput: string): string {
+  const context = results.map(r => r.metadata?.content || r.data || '').join(' ').substring(0, 400);
+  
+  switch (intent.type) {
+    case 'booking':
+    case 'appointment':
+      return `I can help you schedule a consultation! ${context}. Would you like me to book you a time to speak with one of our advisors? I can arrange a 30-minute session this week.`;
+    
+    case 'visa':
+    case 'international':
+      return `For international students: ${context}. Our programs are designed to help with Australian work experience and PR pathways. Do you need specific information about visa requirements or student support services?`;
+    
+    case 'career':
+    case 'job_search':
+      return `Career guidance: ${context}. I can provide information about job market trends, skills development, and career transition strategies. What specific career area interests you?`;
+    
+    case 'course':
+    case 'program':
+      return `Course information: ${context}. Our programs are designed for practical skills and industry connections. Would you like details about course duration, requirements, or career outcomes?`;
+    
+    case 'prerequisite':
+      return `Prerequisites and requirements: ${context}. I can help you understand what preparation you need and create a learning pathway. What's your current background?`;
+    
+    case 'voice_coaching':
+    case 'communication':
+      return `Communication skills: ${context}. We offer voice coaching and presentation skills training to help with job interviews and workplace communication. Are you preparing for interviews?`;
+    
+    default:
+      return `Here's what I found: ${context}. I'm here to help with courses, careers, visa guidance, or scheduling consultations. What would you like to know more about?`;
+  }
+}
+
+// Fallback responses by category
+function generateFallbackResponse(intentType: string): string {
+  const fallbacks = {
+    booking: "I can help you schedule a consultation with our career advisors. Would you like to book a 30-minute session this week?",
+    visa: "For international student support, I can connect you with our visa guidance team. We help with work experience requirements and PR pathways.",
+    career: "I provide career guidance including job search strategies, skills development, and industry insights. What career area interests you?",
+    course: "We offer various programs designed for practical skills and job readiness. Would you like information about specific courses or career outcomes?",
+    voice_coaching: "Our communication coaching helps with interview skills, accent modification, and workplace communication. Are you preparing for job interviews?",
+    general: "I'm here to help with courses, career guidance, visa information, or scheduling consultations. How can I assist you today?"
+  };
+  
+  return fallbacks[intentType] || fallbacks.general;
+}
+
+// Simple fallback search (original logic)
+async function getSimpleResponse(userInput: string): Promise<string> {
+  try {
     const searchResponse = await searchVectors({
       query: userInput,
       limit: 3
     });
 
     if (!searchResponse.success || searchResponse.results.length === 0) {
-      return "I don't have specific information about that topic in my knowledge base. Could you try rephrasing your question or asking about courses, career paths, or educational requirements?";
+      return "I'm here to help with educational and career questions. Could you ask about courses, career paths, or student services?";
     }
 
-    // Create a simple summary from search results
     const context = searchResponse.results.map(r => r.metadata?.content || r.data || '').join(' ');
-    
-    // For voice, provide concise, direct answers
-    if (userInput.toLowerCase().includes('course') || userInput.toLowerCase().includes('program')) {
-      return `Based on our course information: ${context.substring(0, 300)}. Would you like more details about specific programs or requirements?`;
-    }
-    
-    if (userInput.toLowerCase().includes('career') || userInput.toLowerCase().includes('job')) {
-      return `For career guidance: ${context.substring(0, 300)}. I can provide more information about specific career paths if you'd like.`;
-    }
-    
-    if (userInput.toLowerCase().includes('visa') || userInput.toLowerCase().includes('international')) {
-      return `Regarding visa and international student information: ${context.substring(0, 300)}. Do you need specific visa guidance?`;
-    }
-
-    // Default response
     return `Here's what I found: ${context.substring(0, 350)}. Is there a specific aspect you'd like me to explain further?`;
 
   } catch (error) {
-    console.error('Error getting AI response:', error);
-    return "I'm sorry, I'm having trouble accessing my knowledge base right now. Please try again or contact the college directly for assistance.";
+    console.error('Simple search fallback error:', error);
+    return "I'm having trouble accessing information right now. Please try again or contact the college directly.";
   }
 }
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+  
   try {
     const formData = await req.formData();
     const callSid = formData.get('CallSid') as string;
@@ -80,7 +142,6 @@ export async function POST(req: NextRequest) {
         language: 'en-US'
       }, 'I didn\'t catch that. Could you please repeat your question?');
       
-      // Prompt for next question
       const gather = twiml.gather({
         input: ['speech'],
         timeout: 5,
@@ -106,20 +167,77 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    console.log(`User said: ${speechResult}`);
+    console.log(`📞 Voice input received: "${speechResult}"`);
+
+    // SECURITY SCAN - Check for threats and PII
+    const securityResult = security.quickScan({
+      content: speechResult,
+      channel: 'voice',
+      sessionId: callSid,
+      userId: undefined // Voice calls don't have authenticated users initially
+    });
+
+    if (!securityResult.allowed) {
+      console.log(`🛡️ Security blocked voice input: ${securityResult.reason}`);
+      
+      // Check if this is a compliance concern requiring human escalation
+      const needsComplianceEscalation = securityResult.flags?.includes('human_escalation') || 
+                                       securityResult.reason === 'compliance_concern';
+      
+      // Provide safe response with compliance-specific guidance
+      let responseText = securityResult.safeContent || 'I can only help with educational questions.';
+      
+      if (needsComplianceEscalation) {
+        responseText += ' For privacy matters or data requests, I can arrange for you to speak directly with our privacy officer who can provide proper guidance.';
+      }
+      
+      twiml.say({
+        voice: 'alice',
+        language: 'en-US'
+      }, cleanTextForSpeech(responseText));
+      
+      // Still allow them to ask another question
+      const gather = twiml.gather({
+        input: ['speech'],
+        timeout: 5,
+        speechTimeout: 'auto',
+        action: '/api/voice/process-speech',
+        method: 'POST'
+      });
+
+      gather.say({
+        voice: 'alice',
+        language: 'en-US'
+      }, 'Do you have any questions about our courses or services?');
+
+      twiml.hangup();
+
+      return new NextResponse(twiml.toString(), {
+        headers: { 
+          'Content-Type': 'text/xml',
+          'X-Security-Status': 'blocked',
+          'X-Block-Reason': securityResult.reason,
+          'X-Compliance-Escalation': needsComplianceEscalation ? 'true' : 'false'
+        }
+      });
+    }
+
+    // Use safe content for processing
+    const safeInput = securityResult.safeContent || speechResult;
+    console.log(`✅ Security passed, processing: "${safeInput}"`);
 
     // Get conversation context
     const conversation = conversations.get(callSid) || [];
     
-    // Add user message to context
+    // Add user message to context (using safe input)
     conversation.push({
       role: 'user',
-      content: speechResult,
+      content: safeInput,
       timestamp: new Date()
     });
 
-    // Get AI response using existing search system
-    const aiResponse = await getAIResponse(speechResult, conversation);
+    // Get enhanced AI response using multi-agent system
+    const aiResponse = await getAIResponse(safeInput, conversation);
     
     // Add AI response to context
     conversation.push({
@@ -161,8 +279,16 @@ export async function POST(req: NextRequest) {
     
     twiml.hangup();
 
+    const processingTime = Date.now() - startTime;
+    console.log(`⚡ Voice response completed in ${processingTime}ms`);
+
     return new NextResponse(twiml.toString(), {
-      headers: { 'Content-Type': 'text/xml' }
+      headers: { 
+        'Content-Type': 'text/xml',
+        'X-Processing-Time': processingTime.toString(),
+        'X-Security-Status': 'passed',
+        'X-Multi-Agent': 'enabled'
+      }
     });
 
   } catch (error) {

@@ -125,7 +125,15 @@ export async function searchVectors({
       queryOptions.filter = filterString;
     }
     
-    const results = await getVectorIndex().query(queryOptions);
+    const rawResults = await getVectorIndex().query(queryOptions);
+    
+    // Map Upstash results to expected format with content field
+    const results = rawResults.map(result => ({
+      id: result.id,
+      score: result.score,
+      content: result.metadata?.content || '', // Extract content from metadata
+      metadata: result.metadata
+    }));
     
     return { success: true, results };
   } catch (error) {

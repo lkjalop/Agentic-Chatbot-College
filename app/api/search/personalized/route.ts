@@ -7,21 +7,59 @@ import { PersonalizedSearchService } from '@/lib/search/personalized-search';
 import { searchVectors } from '@/lib/vector';
 import { analyzeIntent } from '@/lib/ai/groq';
 import { routeToAgent } from '@/lib/ai/router';
+import { PersonaAwareRouter } from '@/lib/personas/persona-router';
 import { batchUpsertVectors, VectorMetadata } from '@/lib/vector';
 import { cache, createCacheKey, hashObject } from '@/lib/utils/cache';
+import { BasicSecurityAgent } from '@/lib/security/basic-security-agent';
+
+const security = new BasicSecurityAgent();
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession();
     const body = await request.json();
     
-    const { query, agent, filters, limit = 10 } = body;
+    const { query, agent, filters, limit = 10, enablePersonaDetection = false, conversationHistory = [] } = body;
     
     if (!query) {
       return Response.json({ error: 'Query is required' }, { status: 400 });
     }
     
     console.log(`Processing query: "${query}"`);
+
+    // SECURITY SCAN - Check for threats and PII in chat
+    const securityResult = await security.quickScan({
+      content: query,
+      channel: 'chat',
+      sessionId: session?.user?.id || 'anonymous',
+      userId: session?.user?.id
+    });
+
+    if (!securityResult.allowed) {
+      console.log(`🛡️ Security blocked chat input: ${securityResult.reason}`);
+      
+      // Check if this needs compliance escalation
+      const needsComplianceEscalation = securityResult.flags?.includes('human_escalation') || 
+                                       securityResult.reason === 'compliance_concern';
+      
+      let responseText = securityResult.safeContent || 'I can only help with educational and career questions.';
+      
+      if (needsComplianceEscalation) {
+        responseText += ' For privacy matters, data requests, or complex situations, I can connect you with our privacy team or student counselors who can provide proper guidance. Would you like me to help you contact them?';
+      }
+      
+      return Response.json({
+        response: responseText,
+        blocked: true,
+        securityReason: securityResult.reason,
+        complianceEscalation: needsComplianceEscalation,
+        contactInfo: needsComplianceEscalation ? {
+          email: 'privacy@institution.edu',
+          phone: '+1-800-PRIVACY',
+          dataRights: '/api/compliance/data-deletion'
+        } : undefined
+      }, { status: 200 }); // Return 200 but with blocked content
+    }
     
     // Immediate working response for production deployment
     if (!process.env.UPSTASH_VECTOR_REST_URL || !process.env.GROQ_API_KEY) {
@@ -101,37 +139,35 @@ export async function POST(request: NextRequest) {
       selectedAgent = getSimpleAgentRouting(query);
     }
     
-    // Perform vector search with caching
+    // Use PersonaAwareRouter if persona detection is enabled
     let searchResults;
-    try {
-      const vectorCacheKey = createCacheKey('vector', hashObject({ query, limit, filters }));
-      const cachedResults = cache.get<any>(vectorCacheKey);
-      
-      if (cachedResults) {
-        searchResults = cachedResults;
-        console.log(`Using cached vector search: ${searchResults.results?.length || 0} results`);
-      } else {
-        searchResults = await searchVectors({
-          query,
-          limit: limit * 2,
-          filter: {
-            // Remove agent filter temporarily to get better results
-            ...filters
-          }
+    let personaDetection;
+    let personaAwareResponse; // NEW: Store the persona-aware response
+    
+    if (enablePersonaDetection) {
+      try {
+        const personaRouter = new PersonaAwareRouter({
+          resultLimit: limit,
+          memoryContext: conversationHistory,
+          enablePersonaDetection: true
         });
         
-        // Cache successful results for 15 minutes
-        if (searchResults.success && searchResults.results?.length > 0) {
-          cache.set(vectorCacheKey, searchResults, 900000);
-        }
-        console.log(`Vector search returned ${searchResults.results?.length || 0} results`);
+        const routerResult = await personaRouter.route(query, session?.user?.id);
+        searchResults = {
+          success: true,
+          results: routerResult.results
+        };
+        personaDetection = routerResult.personaDetection;
+        personaAwareResponse = routerResult.summary; // NEW: Use the persona-aware response
+        console.log(`Persona-aware search returned ${searchResults.results?.length || 0} results`);
+        console.log(`Persona detection: ${personaDetection?.persona?.archetypeName || 'None'} (${personaDetection?.confidence || 0}% confidence)`);
+        console.log(`Persona-aware response generated: ${personaAwareResponse ? 'Yes' : 'No'}`);
+      } catch (error) {
+        console.warn('Persona-aware routing failed, falling back to standard search:', error);
+        searchResults = await performStandardSearch(query, limit, filters);
       }
-    } catch (error) {
-      console.warn('Vector search failed, using fallback data:', error);
-      searchResults = {
-        success: false,
-        results: []
-      };
+    } else {
+      searchResults = await performStandardSearch(query, limit, filters);
     }
 
     // Auto-populate database if empty (first-time deployment)
@@ -215,8 +251,14 @@ export async function POST(request: NextRequest) {
     // Generate response based on search results and selected agent
     let response;
     try {
-      response = await generateAgentResponse(query, selectedAgent, finalResults, user);
-      console.log(`Generated response: ${response.substring(0, 100)}...`);
+      // NEW: Use persona-aware response if available (from improved system)
+      if (personaAwareResponse) {
+        response = personaAwareResponse;
+        console.log(`Using persona-aware response: ${response.substring(0, 100)}...`);
+      } else {
+        response = await generateAgentResponse(query, selectedAgent, finalResults, user);
+        console.log(`Generated agent response: ${response.substring(0, 100)}...`);
+      }
     } catch (error) {
       console.warn('Response generation failed, using fallback:', error);
       response = getAgentSpecificFallbackResponse(query, selectedAgent);
@@ -226,9 +268,12 @@ export async function POST(request: NextRequest) {
     const diagnostics = {
       agent: selectedAgent,
       confidence: (intent.confidence || 0.8) * 100,
-      personaMatch: {
+      personaMatch: personaDetection ? {
+        name: personaDetection.persona?.archetypeName || getPersonaMatch(query),
+        similarity: personaDetection.confidence || Math.floor(Math.random() * 20) + 80
+      } : {
         name: getPersonaMatch(query),
-        similarity: Math.floor(Math.random() * 20) + 80 // 80-99% similarity
+        similarity: Math.floor(Math.random() * 20) + 80
       },
       sources: (finalResults.results || searchResults.results || [])
         .slice(0, 3)
@@ -559,6 +604,39 @@ function getAgentSpecificFallbackResponse(query: string, agent: string): string 
   };
 
   return responses[agent as keyof typeof responses] || responses.knowledge;
+}
+
+async function performStandardSearch(query: string, limit: number, filters: any) {
+  try {
+    const vectorCacheKey = createCacheKey('vector', hashObject({ query, limit, filters }));
+    const cachedResults = cache.get<any>(vectorCacheKey);
+    
+    if (cachedResults) {
+      console.log(`Using cached vector search: ${cachedResults.results?.length || 0} results`);
+      return cachedResults;
+    }
+    
+    const searchResults = await searchVectors({
+      query,
+      limit: limit * 2,
+      filter: {
+        ...filters
+      }
+    });
+    
+    // Cache successful results for 15 minutes
+    if (searchResults.success && searchResults.results?.length > 0) {
+      cache.set(vectorCacheKey, searchResults, 900000);
+    }
+    console.log(`Vector search returned ${searchResults.results?.length || 0} results`);
+    return searchResults;
+  } catch (error) {
+    console.warn('Vector search failed, using fallback data:', error);
+    return {
+      success: false,
+      results: []
+    };
+  }
 }
 
 export async function PUT(request: NextRequest) {

@@ -22,16 +22,19 @@ export async function generateEmpatheticResponse({
     const systemPrompt = buildPersonaAwareSystemPrompt(personaDetection);
     const enhancedContext = buildEnhancedContext(searchResults, personaDetection);
     const userPrompt = buildPersonalizedUserPrompt(query, personaDetection);
+    
+    // Combine context with user prompt
+    const fullUserPrompt = enhancedContext ? `${enhancedContext}\n\n${userPrompt}` : userPrompt;
 
     const completion = await groq.chat.completions.create({
       messages: [
         { role: 'system', content: systemPrompt },
         ...conversationHistory.slice(-4), // Last 2 exchanges for context
-        { role: 'user', content: userPrompt }
+        { role: 'user', content: fullUserPrompt }
       ],
       model: 'llama-3.3-70b-versatile',
-      temperature: 0.7, // Warmer for more empathetic responses
-      max_tokens: 800
+      temperature: 0.8, // More conversational
+      max_tokens: 300 // Much shorter responses
     });
 
     let response = completion.choices[0]?.message?.content || 
@@ -50,72 +53,49 @@ export async function generateEmpatheticResponse({
 function buildPersonaAwareSystemPrompt(detection: PersonaDetectionResult): string {
   const { persona, emotionalNeeds, journeyStage } = detection;
   
-  let basePrompt = `You are an empathetic education counselor specializing in helping international students transition into tech careers. Your responses should be warm, understanding, and culturally sensitive.`;
+  let basePrompt = `You are a friendly course advisor at Employability Advantage helping people choose the right track from our 4 bootcamp options. Your goal is to match them with the perfect course and guide them toward enrollment or consultation.
 
-  // Persona-specific adjustments
+4 COURSE TRACKS AVAILABLE:
+- Business Analyst ($740 AUD): Agile, user stories, requirements, prototyping - perfect for career changers, no coding required
+- Data & AI Analyst ($740 AUD): Python, SQL, dashboards, AI tools - for data-driven roles, some technical skills taught
+- Cybersecurity ($740 AUD): AWS security, compliance, risk management - high demand, suitable for beginners
+- Full Stack Developer ($740 AUD): Modern web development, frontend/backend - for those who want to build applications
+
+PLUS: 6-week Live Industry Project ($790 AUD) - work on real client projects, cross-track collaboration
+
+PRICING: $740 per track, $185/week payment plans, bundle for $1,430 (saves $100)
+
+YOUR APPROACH:
+- Read their question to understand which track(s) they're interested in
+- Give specific info about the relevant track(s)
+- If unsure, help them compare options
+- Conversational tone (like talking to a friend)
+- Always end with clear next step (book consultation or enroll)`;
+
+  // Persona-specific context
   if (persona?.archetypeName) {
-    basePrompt += `\n\nYou're speaking with someone similar to ${persona.archetypeName}`;
-    
-    if (persona.nationality) {
-      basePrompt += ` from ${persona.nationality}`;
+    if (persona.visaType === '485') {
+      basePrompt += `\n\nTalking to someone on 485 visa - highlight fast entry to workforce, PR pathway potential.`;
     }
-    
-    if (persona.visaType) {
-      basePrompt += ` on a ${persona.visaType} visa`;
+    if (persona.previousField && persona.previousField !== 'IT') {
+      basePrompt += `\n\nThey're transitioning from ${persona.previousField} - show how their background is actually valuable.`;
     }
-    
-    if (persona.location && persona.isRegional) {
-      basePrompt += ` living in regional ${persona.location}`;
+    if (persona?.archetypeName?.includes('Callum')) {
+      basePrompt += `\n\nLocal Australian - emphasize they don't need uni degree, admin background is perfect.`;
     }
-    
-    basePrompt += '.';
-  }
-
-  // Background context
-  if (persona?.previousField && persona.previousField !== 'IT') {
-    basePrompt += `\n\nThey're transitioning from ${persona.previousField} to tech, so explain technical concepts in relatable terms and acknowledge the challenge of career change.`;
-  }
-
-  if (persona?.workExperience?.includes('no') || persona?.techConfidence === 'none') {
-    basePrompt += `\n\nThey have little to no tech experience, so be encouraging and start with basics.`;
-  }
-
-  // Emotional state guidance
-  if (emotionalNeeds.includes('reassurance')) {
-    basePrompt += `\n\nThey seem worried or anxious. Provide reassurance and normalize their concerns.`;
-  }
-  
-  if (emotionalNeeds.includes('immediate_action')) {
-    basePrompt += `\n\nThey have time pressure or urgency. Prioritize actionable next steps.`;
-  }
-
-  // Journey stage context
-  if (journeyStage) {
-    const stageGuidance = {
-      awareness: 'They\'re just learning about options. Focus on overview and possibilities.',
-      research: 'They\'re comparing options. Provide clear comparisons and recommendations.',
-      pre_consultation: 'They\'re ready to talk to someone. Encourage booking a consultation.',
-      decision: 'They\'re choosing between options. Help them decide confidently.',
-      bootcamp_start: 'They\'re beginning their journey. Focus on preparation and mindset.',
-      engagement: 'They\'re in the middle of learning. Provide specific help and encouragement.',
-      post_completion: 'They\'ve finished learning. Focus on job search and next steps.'
-    };
-    
-    const guidance = stageGuidance[journeyStage as keyof typeof stageGuidance];
-    if (guidance) {
-      basePrompt += `\n\nJourney stage: ${guidance}`;
+    if (persona?.archetypeName?.includes('Tyler')) {
+      basePrompt += `\n\nRecent high school grad - show alternative to university, hands-on learning.`;
     }
   }
 
-  // Communication style
-  basePrompt += `\n\nCommunication guidelines:
-1. Start with empathy - acknowledge their situation
-2. Be specific and practical - give actionable advice
-3. Include encouragement - highlight their strengths
-4. Address visa/regional concerns if relevant
-5. Use "you" language to make it personal
-6. End with a clear next step or question
-7. Keep it conversational and warm`;
+  // Next step guidance based on journey stage
+  if (journeyStage === 'research' || journeyStage === 'awareness') {
+    basePrompt += `\n\nEND WITH: Offer to book a quick chat with an advisor to get personalized advice.`;
+  } else if (journeyStage === 'decision') {
+    basePrompt += `\n\nEND WITH: Ask if they want to secure their spot or talk through any final concerns.`;
+  } else {
+    basePrompt += `\n\nEND WITH: Ask what their biggest question is right now.`;
+  }
 
   return basePrompt;
 }
@@ -123,43 +103,73 @@ function buildPersonaAwareSystemPrompt(detection: PersonaDetectionResult): strin
 function buildEnhancedContext(searchResults: any[], detection: PersonaDetectionResult): string {
   if (!searchResults.length) return '';
   
-  const context = searchResults.map(result => {
-    let content = `Title: ${result.metadata?.title}\nContent: ${result.content}`;
+  // Extract key info from bootcamp Q&As
+  let keyInfo = '';
+  let successStories = '';
+  let specificDetails = '';
+  
+  searchResults.forEach(result => {
+    const content = result.content || '';
     
-    // Add persona-relevant context
-    if (result.metadata?.prerequisites && detection.persona?.techConfidence === 'none') {
-      content += `\nNote: This builds on ${result.metadata.prerequisites.join(', ')}`;
+    // Extract pricing info
+    if (content.includes('$740') || content.includes('$185')) {
+      keyInfo += 'PRICING: $740 AUD total or $185/week payment plan available. ';
     }
     
-    if (result.metadata?.difficulty) {
-      content += `\nDifficulty: ${result.metadata.difficulty}`;
+    // Extract timeline info  
+    if (content.includes('4 week') || content.includes('6 week')) {
+      keyInfo += 'TIMELINE: 4-week bootcamp + optional 6-week industry project. ';
     }
     
-    return content;
-  }).join('\n\n---\n\n');
-
-  return `Relevant information found:\n${context}`;
+    // Extract success stories
+    if (content.includes('alumni') || content.includes('graduates') || content.includes('success')) {
+      const match = content.match(/([^.]*(?:alumni|graduates|success)[^.]*\.)/i);
+      if (match) {
+        successStories += match[1] + ' ';
+      }
+    }
+    
+    // Extract specific outcomes/benefits
+    if (content.includes('portfolio') || content.includes('job-ready') || content.includes('entry-level')) {
+      const match = content.match(/([^.]*(?:portfolio|job-ready|entry-level)[^.]*\.)/i);
+      if (match) {
+        specificDetails += match[1] + ' ';
+      }
+    }
+  });
+  
+  let context = '';
+  if (keyInfo) context += `KEY INFO: ${keyInfo.trim()}\n`;
+  if (successStories) context += `SUCCESS STORIES: ${successStories.trim()}\n`;
+  if (specificDetails) context += `OUTCOMES: ${specificDetails.trim()}\n`;
+  
+  // Add raw content for additional context (first 2 results)
+  const rawContent = searchResults.slice(0, 2).map(r => r.content?.substring(0, 200)).join(' ');
+  if (rawContent) context += `\nADDITIONAL CONTEXT: ${rawContent}...`;
+  
+  return context;
 }
 
 function buildPersonalizedUserPrompt(query: string, detection: PersonaDetectionResult): string {
-  let prompt = `Query: ${query}`;
+  let prompt = `STUDENT QUESTION: ${query}`;
   
-  // Add detected context for the AI to reference
-  if (detection.confidence > 50) {
-    prompt += `\n\nDetected context:`;
+  // Add persona context if detected  
+  if (detection.confidence > 25) {
+    prompt += `\n\nPERSONA DETECTED: ${detection.persona?.archetypeName || 'Student'}`;
     if (detection.persona?.visaType) {
-      prompt += `\n- Visa: ${detection.persona.visaType}`;
-    }
-    if (detection.persona?.location) {
-      prompt += `\n- Location: ${detection.persona.location}`;
+      prompt += ` (${detection.persona.visaType} visa)`;
     }
     if (detection.persona?.previousField) {
-      prompt += `\n- Background: ${detection.persona.previousField}`;
-    }
-    if (detection.emotionalNeeds.length > 0) {
-      prompt += `\n- Emotional needs: ${detection.emotionalNeeds.join(', ')}`;
+      prompt += ` - Background: ${detection.persona.previousField}`;
     }
   }
+  
+  // Add emotional context
+  if (detection.emotionalNeeds.length > 0) {
+    prompt += `\n\nEMOTIONAL NEEDS: ${detection.emotionalNeeds.join(', ')}`;
+  }
+  
+  prompt += `\n\nINSTRUCTIONS: Give a friendly, specific response using the bootcamp details and context provided. Keep it conversational and end with a clear next step.`;
 
   return prompt;
 }
@@ -198,18 +208,21 @@ async function enhanceResponseForPersona(
 }
 
 function generateFallbackResponse(detection: PersonaDetectionResult, query: string): string {
-  let response = "I understand you're looking for guidance, and I want to help you find the right path forward.";
+  let response = "Hey! I'd love to help you figure out if our Business Analyst bootcamp is a good fit for you.";
   
-  // Add basic persona acknowledgment if detected
-  if (detection.persona?.nationality && detection.confidence > 30) {
-    response += ` As someone from ${detection.persona.nationality}, I know navigating the Australian tech industry can feel overwhelming.`;
+  // Add specific bootcamp info
+  response += " It's a 4-week program ($740 AUD or $185/week payments) that gets you job-ready for entry-level BA roles.";
+  
+  // Add persona-specific context if detected
+  if (detection.persona?.visaType === '485') {
+    response += " Perfect timing with your 485 visa - many graduates land jobs within months.";
+  } else if (detection.persona?.archetypeName?.includes('Tyler')) {
+    response += " Great alternative to uni - hands-on learning, real projects, portfolio building.";
+  } else if (detection.persona?.archetypeName?.includes('Callum')) {
+    response += " Your admin background is actually perfect for BA work - you already understand business processes.";
   }
   
-  if (detection.emotionalNeeds.includes('reassurance')) {
-    response += " Your concerns are completely valid, and many students in similar situations have successfully made this transition.";
-  }
-  
-  response += " Could you tell me a bit more about your specific situation so I can provide more targeted advice?";
+  response += " Want to book a quick 15-min chat to see if it's right for your situation?";
   
   return response;
 }

@@ -28,14 +28,18 @@ export class PersonaDetector {
       'points test', 'skilled migration', 'regional nomination'
     ],
     background: [
-      'engineer', 'business', 'accounting', 'teaching', 'marketing',
+      'engineer', 'mechanical engineer', 'business', 'accounting', 'teaching', 'marketing',
+      'admin', 'administrative', 'healthcare', 'physiotherapist', 'creative',
+      'high school', 'recent graduate', 'just finished', 'university degree',
       'no IT', 'no tech', 'non-technical', 'career change', 'career switch',
-      'different field', 'new to IT', 'first time', 'beginner'
+      'different field', 'new to IT', 'first time', 'beginner', 'switching to tech',
+      'transitioning', 'career transition'
     ],
     emotional: [
       'worried', 'anxious', 'stressed', 'confused', 'lost', 'overwhelmed',
-      'frustrated', 'scared', 'uncertain', 'concerned', 'nervous',
-      'hopeful', 'excited', 'motivated', 'determined', 'confident'
+      'frustrated', 'struggling', 'scared', 'uncertain', 'concerned', 'nervous',
+      'hopeful', 'excited', 'motivated', 'determined', 'confident', 'failure',
+      'feel like a failure', 'wasting', 'too old', 'age', 'family responsibilities'
     ],
     technical: [
       'never coded', 'no programming', 'basic computer', 'advanced user',
@@ -45,11 +49,12 @@ export class PersonaDetector {
     location: [
       'regional', 'rural', 'country', 'small town', 'sydney', 'melbourne',
       'brisbane', 'perth', 'adelaide', 'darwin', 'canberra', 'wollongong',
-      'newcastle', 'geelong', 'townsville'
+      'newcastle', 'geelong', 'townsville', 'australian', 'local'
     ],
     urgency: [
       'urgent', 'quickly', 'asap', 'soon', 'deadline', 'running out',
-      'time pressure', 'need job', 'unemployed', 'contract ending'
+      'time pressure', 'need job', 'unemployed', 'contract ending',
+      'rejections', 'interviews', 'job hunting'
     ]
   };
 
@@ -99,7 +104,7 @@ export class PersonaDetector {
     const emotionalNeeds = this.detectEmotionalNeeds(fullContext);
 
     // If no good match, use default international student persona
-    if (!bestMatch || bestMatch.score < 30) {
+    if (!bestMatch || bestMatch.score < 25) {
       const defaultPersona = await this.getDefaultPersona();
       return {
         persona: defaultPersona,
@@ -166,7 +171,7 @@ export class PersonaDetector {
     // Visa type matching (high weight)
     const visaSignals = signals.filter(s => s.startsWith('visa:'));
     if (visaSignals.some(s => s.includes(persona.visaType?.toLowerCase() || ''))) {
-      score += 25;
+      score += 30; // Increased from 25
     }
 
     // Location matching (medium weight)
@@ -182,20 +187,80 @@ export class PersonaDetector {
       score += 15;
     }
 
-    // Background field matching (medium weight)
+    // Background field matching (enhanced with better patterns)
     const backgroundSignals = signals.filter(s => s.startsWith('background:'));
-    if (persona.previousField && backgroundSignals.some(s => 
-        s.includes(persona.previousField.toLowerCase().split(' ')[0])
-    )) {
+    if (persona.previousField && backgroundSignals.length > 0) {
+      const personaField = persona.previousField.toLowerCase();
+      const hasMatch = backgroundSignals.some(s => {
+        const signal = s.toLowerCase();
+        
+        // Direct field matching
+        if (signal.includes(personaField)) return true;
+        
+        // Enhanced field matching
+        if (personaField.includes('mechanical') && signal.includes('engineer')) return true;
+        if (personaField.includes('marketing') && signal.includes('marketing')) return true;
+        if (personaField.includes('admin') && signal.includes('admin')) return true;
+        if (personaField.includes('healthcare') && signal.includes('healthcare')) return true;
+        
+        // Career transition signals
+        if (signal.includes('career change') || signal.includes('switching') || signal.includes('transitioning')) {
+          return true;
+        }
+        
+        return false;
+      });
+      
+      if (hasMatch) {
+        score += 20; // Increased from 15
+      }
+    }
+
+    // Age/Experience level matching (new)
+    if (persona.archetypeName?.toLowerCase().includes('tyler') && 
+        signals.some(s => s.includes('high school') || s.includes('recent graduate'))) {
+      score += 15;
+    }
+    
+    if (persona.archetypeName?.toLowerCase().includes('callum') && 
+        signals.some(s => s.includes('australian') || s.includes('admin'))) {
       score += 15;
     }
 
-    // Emotional state matching (low weight but important)
+    // Emotional state matching (enhanced)
     const emotionalSignals = signals.filter(s => s.startsWith('emotional:'));
-    if (persona.emotionalState && emotionalSignals.some(s => 
-        s.includes(persona.emotionalState.toLowerCase())
-    )) {
-      score += 10;
+    if (persona.emotionalState && emotionalSignals.length > 0) {
+      const personaEmotion = persona.emotionalState.toLowerCase();
+      const hasMatch = emotionalSignals.some(s => {
+        const signal = s.toLowerCase();
+        
+        // Direct match
+        if (signal.includes(personaEmotion)) return true;
+        
+        // Enhanced synonym matching
+        if (personaEmotion === 'frustrated' && (
+          signal.includes('struggling') || signal.includes('stressed') || 
+          signal.includes('failure') || signal.includes('rejections')
+        )) return true;
+        
+        if (personaEmotion === 'anxious' && (
+          signal.includes('worried') || signal.includes('concerned') || signal.includes('nervous')
+        )) return true;
+        
+        if (personaEmotion === 'hopeful' && (
+          signal.includes('motivated') || signal.includes('determined') || signal.includes('excited')
+        )) return true;
+        
+        if (personaEmotion === 'uncertain' && (
+          signal.includes('confused') || signal.includes('lost') || signal.includes('wasting')
+        )) return true;
+        
+        return false;
+      });
+      
+      if (hasMatch) {
+        score += 15; // Increased from 10
+      }
     }
 
     // Technical confidence matching
@@ -206,12 +271,15 @@ export class PersonaDetector {
       score += 10;
     }
 
-    // Urgency matching
+    // Urgency matching (enhanced)
     const urgencySignals = signals.filter(s => s.startsWith('urgency:'));
-    if (persona.urgencyLevel && urgencySignals.some(s => 
-        s.includes('urgent') || s.includes('quickly')
-    ) && persona.urgencyLevel === 'high') {
-      score += 5;
+    if (urgencySignals.length > 0) {
+      // Give points for any urgency signals that match the persona's likely urgency
+      if (persona.visaType === '485' && urgencySignals.some(s => 
+        s.includes('job hunting') || s.includes('interviews') || s.includes('rejections')
+      )) {
+        score += 10;
+      }
     }
 
     return Math.min(score, 100); // Cap at 100%

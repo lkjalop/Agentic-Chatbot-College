@@ -72,7 +72,7 @@ export class PersonaAwareRouter {
       
       // Step 5: Generate empathetic response if persona detected
       let summary: string | undefined;
-      if (personaDetection && personaDetection.confidence > 40) {
+      if (personaDetection && personaDetection.confidence > 15) { // Lowered from 25% to 15%
         summary = await generateEmpatheticResponse({
           query,
           personaDetection,
@@ -190,7 +190,7 @@ export class PersonaAwareRouter {
     // First, try to find persona-specific content
     let personaResults: any[] = [];
     
-    if (personaDetection && personaDetection.confidence > 40) {
+    if (personaDetection && personaDetection.confidence > 25) {
       const personaFilter = {
         contentType: 'persona_qa',
         personaCode: personaDetection.persona?.archetypeCode

@@ -191,13 +191,15 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
     updateAgentsForMessage(userMessage.content);
 
     try {
-      // Call your AI API here
+      // Call enhanced persona-aware API
       const response = await fetch('/api/search/personalized', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: userMessage.content,
-          userId: session?.user?.id
+          userId: session?.user?.id,
+          enablePersonaDetection: true,
+          conversationHistory: messages.slice(-6) // Last 6 messages for context
         })
       });
 
@@ -214,6 +216,37 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
       }
 
       console.log('API Response:', data); // Debug log
+
+      // Handle security/compliance responses
+      if (data.blocked) {
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: data.response,
+          timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, assistantMessage]);
+
+        // Show compliance escalation info if needed
+        if (data.complianceEscalation && data.contactInfo) {
+          const complianceMessage: Message = {
+            id: (Date.now() + 2).toString(),
+            role: 'assistant',
+            content: `For your privacy rights, you can also: 
+• Request data deletion: Contact ${data.contactInfo.email}
+• Call our privacy line: ${data.contactInfo.phone}
+• Submit a data request: Use our online form
+            
+I'm here to help with educational and career questions. How else can I assist you today?`,
+            timestamp: new Date()
+          };
+          
+          setMessages(prev => [...prev, complianceMessage]);
+        }
+        
+        return; // Exit early for blocked content
+      }
 
       // Update agents with real diagnostic data from API
       if (data.diagnostics) {
@@ -604,8 +637,6 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
           flex: 1;
           padding: 20px;
           overflow-y: auto;
-          max-width: 800px;
-          margin: 0 auto;
           width: 100%;
         }
 
@@ -651,8 +682,6 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
         .input-container {
           padding: 20px;
           border-top: 1px solid #e9ecef;
-          max-width: 800px;
-          margin: 0 auto;
           width: 100%;
         }
 
