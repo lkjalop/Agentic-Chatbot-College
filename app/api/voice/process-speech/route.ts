@@ -102,7 +102,7 @@ function generateFallbackResponse(intentType: string): string {
     general: "I'm here to help with courses, career guidance, visa information, or scheduling consultations. How can I assist you today?"
   };
   
-  return fallbacks[intentType] || fallbacks.general;
+  return fallbacks[intentType as keyof typeof fallbacks] || fallbacks.general;
 }
 
 // Simple fallback search (original logic)
@@ -117,7 +117,7 @@ async function getSimpleResponse(userInput: string): Promise<string> {
       return "I'm here to help with educational and career questions. Could you ask about courses, career paths, or student services?";
     }
 
-    const context = searchResponse.results.map(r => r.metadata?.content || r.data || '').join(' ');
+    const context = searchResponse.results.map(r => r.metadata?.content || r.content || '').join(' ');
     return `Here's what I found: ${context.substring(0, 350)}. Is there a specific aspect you'd like me to explain further?`;
 
   } catch (error) {
@@ -177,15 +177,16 @@ export async function POST(req: NextRequest) {
       userId: undefined // Voice calls don't have authenticated users initially
     });
 
-    if (!securityResult.allowed) {
-      console.log(`🛡️ Security blocked voice input: ${securityResult.reason}`);
+    const securityCheck = await securityResult;
+    if (!securityCheck.allowed) {
+      console.log(`🛡️ Security blocked voice input: ${securityCheck.reason}`);
       
       // Check if this is a compliance concern requiring human escalation
-      const needsComplianceEscalation = securityResult.flags?.includes('human_escalation') || 
-                                       securityResult.reason === 'compliance_concern';
+      const needsComplianceEscalation = securityCheck.flags?.includes('human_escalation') || 
+                                       securityCheck.reason === 'compliance_concern';
       
       // Provide safe response with compliance-specific guidance
-      let responseText = securityResult.safeContent || 'I can only help with educational questions.';
+      let responseText = securityCheck.safeContent || 'I can only help with educational questions.';
       
       if (needsComplianceEscalation) {
         responseText += ' For privacy matters or data requests, I can arrange for you to speak directly with our privacy officer who can provide proper guidance.';
@@ -216,14 +217,14 @@ export async function POST(req: NextRequest) {
         headers: { 
           'Content-Type': 'text/xml',
           'X-Security-Status': 'blocked',
-          'X-Block-Reason': securityResult.reason,
+          'X-Block-Reason': securityCheck.reason || 'unknown',
           'X-Compliance-Escalation': needsComplianceEscalation ? 'true' : 'false'
         }
       });
     }
 
     // Use safe content for processing
-    const safeInput = securityResult.safeContent || speechResult;
+    const safeInput = securityCheck.safeContent || speechResult;
     console.log(`✅ Security passed, processing: "${safeInput}"`);
 
     // Get conversation context

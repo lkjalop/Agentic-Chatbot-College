@@ -361,7 +361,7 @@ export class BasicSecurityAgent {
       inappropriate_content: "I can only assist with educational and career-related topics. If you have questions about professional development, career paths, or educational programs, I'm here to help with those."
     };
 
-    return responses[reason] || "I'm here to help with your educational and career questions. If you need more personalized assistance, I can arrange for you to speak with a human advisor. How can I assist you?";
+    return responses[reason as keyof typeof responses] || "I'm here to help with your educational and career questions. If you need more personalized assistance, I can arrange for you to speak with a human advisor. How can I assist you?";
   }
 
   /**

@@ -204,7 +204,13 @@ export async function searchWithRelationships({
           });
           
           if (relatedResult?.[0]) {
-            queue.push({ ...relatedResult[0], depth: current.depth + 1, score: 0.8 });
+            queue.push({ 
+              id: relatedResult[0].id,
+              depth: current.depth + 1, 
+              score: 0.8,
+              content: relatedResult[0].metadata?.content || relatedResult[0].data || '',
+              metadata: relatedResult[0].metadata || {}
+            });
           }
         }
       }
