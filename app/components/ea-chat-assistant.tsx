@@ -156,8 +156,8 @@ export function EAChatAssistant() {
           agent: data.agent || 'knowledge',
           confidence: data.diagnostics?.confidence || (data.intent?.confidence || 0.8) * 100,
           personaMatch: data.diagnostics?.personaMatch || {
-            name: 'Rohan Patel',
-            similarity: 91
+            name: 'Reference: General student profile',
+            similarity: 75
           },
           sources: data.diagnostics?.sources || data.results?.map((r: any) => r.metadata?.title || r.title).slice(0, 3) || ['Business Analyst Bootcamp', 'Career Switcher Guide', 'India Student Support'],
           reasoning: data.diagnostics?.reasoning || (data.intent?.type === 'career_path' 
@@ -547,9 +547,7 @@ export function EAChatAssistant() {
                                 <div className="flex items-center gap-2">
                                   {/* Gender-based avatar */}
                                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white ${
-                                    ['Priya', 'Li Wen', 'Sarah', 'Sadia', 'Hanh', 'Aarti', 'Amina', 'Mey Lin', 'Camila', 'Chelsea', 'Farah', 'Dr. Anjali'].some(
-                                      name => message.diagnostics?.personaMatch?.name?.includes(name)
-                                    ) ? 'bg-[--ea-orange]' : 'bg-[--ea-navy]'
+                                    message.diagnostics?.personaMatch?.name?.includes('Reference:') ? 'bg-[--ea-navy]' : 'bg-[--ea-orange]'
                                   }`}>
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                                       <circle cx="12" cy="8" r="3"/>
@@ -579,6 +577,97 @@ export function EAChatAssistant() {
                               ))}
                             </div>
                           </div>
+
+                          {/* Security Status Panel - Show if security data exists */}
+                          {message.diagnostics?.security && (
+                            <div className={`rounded-lg p-3 border-2 ${
+                              message.diagnostics.security.threatLevel === 'alert' || message.diagnostics.security.threatLevel === 'critical'
+                                ? 'bg-red-50 border-red-200' 
+                                : message.diagnostics.security.threatLevel === 'warning'
+                                ? 'bg-yellow-50 border-yellow-200'
+                                : 'bg-green-50 border-green-200'
+                            }`}>
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className={`w-3 h-3 rounded-full ${
+                                  message.diagnostics.security.threatLevel === 'alert' || message.diagnostics.security.threatLevel === 'critical'
+                                    ? 'bg-red-500' 
+                                    : message.diagnostics.security.threatLevel === 'warning'
+                                    ? 'bg-yellow-500'
+                                    : 'bg-green-500'
+                                }`}></div>
+                                <div className="text-xs font-medium text-[--ea-text-secondary] uppercase tracking-wide">
+                                  Security Scan
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-[--ea-text-primary]">Threat Level:</span>
+                                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                    message.diagnostics.security.threatLevel === 'alert' || message.diagnostics.security.threatLevel === 'critical'
+                                      ? 'bg-red-100 text-red-800' 
+                                      : message.diagnostics.security.threatLevel === 'warning'
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-green-100 text-green-800'
+                                  }`}>
+                                    {message.diagnostics.security.threatLevel || 'safe'}
+                                  </span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-[--ea-text-primary]">PII Detection:</span>
+                                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                    message.diagnostics.security.piiDetection === 'detected'
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-green-100 text-green-800'
+                                  }`}>
+                                    {message.diagnostics.security.piiDetection || 'clear'}
+                                  </span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-[--ea-text-primary]">Content Filter:</span>
+                                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                    message.diagnostics.security.contentFilter === 'blocked'
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-green-100 text-green-800'
+                                  }`}>
+                                    {message.diagnostics.security.contentFilter || 'safe'}
+                                  </span>
+                                </div>
+
+                                {message.diagnostics.security.flags && message.diagnostics.security.flags.length > 0 && (
+                                  <div className="mt-2">
+                                    <div className="text-xs font-medium text-[--ea-text-secondary] mb-1">Detected Threats:</div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {message.diagnostics.security.flags.map((flag: string, idx: number) => (
+                                        <span key={idx} className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
+                                          {flag.replace(/_/g, ' ')}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {message.diagnostics.security.detectedThreats && message.diagnostics.security.detectedThreats.length > 0 && (
+                                  <div className="mt-2">
+                                    <div className="text-xs font-medium text-[--ea-text-secondary] mb-1">Security Alerts:</div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {message.diagnostics.security.detectedThreats.map((threat: string, idx: number) => (
+                                        <span key={idx} className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
+                                          {threat.replace(/_/g, ' ')}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                <div className="text-xs text-[--ea-text-secondary] mt-2">
+                                  Scan time: {new Date(message.diagnostics.security.scanTime).toLocaleTimeString()}
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
                           <div className="bg-white rounded-lg p-3 border border-gray-200">
                             <div className="text-xs font-medium text-[--ea-text-secondary] uppercase tracking-wide mb-2">

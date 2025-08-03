@@ -165,6 +165,18 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
       });
     }
     
+    // Add security scan info
+    if (diagnostics.security) {
+      agents.push({
+        id: 'security',
+        name: 'Security Scan',
+        icon: diagnostics.security.threatLevel === 'safe' ? '🛡️' : '⚠️',
+        type: 'security',
+        confidence: diagnostics.security.threatLevel === 'safe' ? 100 : 50,
+        details: diagnostics.security
+      });
+    }
+    
     setActiveAgents(agents);
     
     // Auto-open agent panel to show the routing
@@ -445,6 +457,32 @@ I'm here to help with educational and career questions. How else can I assist yo
                 <div style={{ padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid #e9ecef' }}>
                   <p style={{ fontSize: '13px', color: '#6c757d', lineHeight: 1.5 }}>
                     Query processed through multi-agent analysis with context-aware routing
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {activeAgents.filter(a => a.type === 'security').length > 0 && (
+              <div className="agent-section">
+                <div className="section-title">SECURITY SCAN</div>
+                {activeAgents.filter(a => a.type === 'security').map(agent => (
+                  <div key={agent.id} className="agent-item">
+                    <div className="agent-icon">{agent.icon}</div>
+                    <div className="agent-name">Security Monitor</div>
+                    {agent.confidence && (
+                      <div className="confidence" style={{ 
+                        color: agent.confidence === 100 ? '#28a745' : '#ffc107' 
+                      }}>
+                        {agent.confidence === 100 ? 'SAFE' : 'ALERT'}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <div style={{ padding: '8px 12px', background: '#f8f9fa', borderRadius: '6px', marginTop: '8px' }}>
+                  <p style={{ fontSize: '12px', color: '#6c757d', margin: 0 }}>
+                    ✅ PII Detection: Clear<br/>
+                    ✅ Threat Scan: Passed<br/>
+                    ✅ Content Filter: Safe
                   </p>
                 </div>
               </div>

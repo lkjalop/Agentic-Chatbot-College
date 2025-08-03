@@ -57,7 +57,25 @@ export async function POST(request: NextRequest) {
           email: 'privacy@institution.edu',
           phone: '+1-800-PRIVACY',
           dataRights: '/api/compliance/data-deletion'
-        } : undefined
+        } : undefined,
+        diagnostics: {
+          agent: 'security',
+          confidence: 100,
+          personaMatch: null,
+          sources: ['Security Scanner', 'PII Detection', 'Compliance Monitor'],
+          reasoning: `Security scan detected ${securityResult.reason}. Request blocked for user protection.`,
+          security: {
+            scanPerformed: true,
+            threatLevel: 'alert',
+            flags: securityResult.flags || [],
+            scanTime: new Date().toISOString(),
+            piiDetection: securityResult.flags?.includes('credit_card') || securityResult.flags?.includes('us_ssn') || securityResult.flags?.includes('australian_tfn') ? 'detected' : 'none',
+            threatScan: securityResult.reason === 'security_threat_detected' ? 'blocked' : 'monitoring',
+            contentFilter: 'blocked',
+            detectedThreats: securityResult.flags || [],
+            securityLevel: needsComplianceEscalation ? 'critical' : 'high'
+          }
+        }
       }, { status: 200 }); // Return 200 but with blocked content
     }
     
@@ -84,7 +102,7 @@ export async function POST(request: NextRequest) {
           agent: fallbackAgent,
           confidence: 85,
           personaMatch: {
-            name: getPersonaMatch(query),
+            name: getPersonaMatch(query, session),
             similarity: Math.floor(Math.random() * 15) + 85
           },
           sources: ['Career Knowledge Base', 'Industry Guidelines', 'Student Support Resources'],
@@ -256,7 +274,7 @@ export async function POST(request: NextRequest) {
         response = personaAwareResponse;
         console.log(`Using persona-aware response: ${response.substring(0, 100)}...`);
       } else {
-        response = await generateAgentResponse(query, selectedAgent, finalResults, user);
+        response = await generateAgentResponse(query, selectedAgent, finalResults, user, session);
         console.log(`Generated agent response: ${response.substring(0, 100)}...`);
       }
     } catch (error) {
@@ -269,17 +287,26 @@ export async function POST(request: NextRequest) {
       agent: selectedAgent,
       confidence: (intent.confidence || 0.8) * 100,
       personaMatch: personaDetection ? {
-        name: personaDetection.persona?.archetypeName || getPersonaMatch(query),
+        name: personaDetection.persona?.archetypeName || getPersonaMatch(query, session),
         similarity: personaDetection.confidence || Math.floor(Math.random() * 20) + 80
       } : {
-        name: getPersonaMatch(query),
+        name: getPersonaMatch(query, session),
         similarity: Math.floor(Math.random() * 20) + 80
       },
       sources: (finalResults.results || searchResults.results || [])
         .slice(0, 3)
         .map((r: any) => r.metadata?.title || r.title || 'Knowledge Base')
         .filter(Boolean),
-      reasoning: generateReasoning(intent.type, selectedAgent, query)
+      reasoning: generateReasoning(intent.type, selectedAgent, query),
+      security: {
+        scanPerformed: true,
+        threatLevel: 'safe',
+        flags: [],
+        scanTime: new Date().toISOString(),
+        piiDetection: 'clear',
+        threatScan: 'passed',
+        contentFilter: 'safe'
+      }
     };
 
     return Response.json({
@@ -307,16 +334,28 @@ async function generateAgentResponse(
   query: string, 
   agent: string, 
   searchResults: any, 
-  user: any
+  user: any,
+  session?: any
 ): Promise<string> {
   const context = searchResults.results?.slice(0, 3).map((r: any) => r.content).join('\n') || '';
   
+  // Determine how to address the user
+  let userGreeting = '';
+  if (session?.user?.name) {
+    userGreeting = session.user.name.split(' ')[0]; // Use first name only
+  } else if (user?.name) {
+    userGreeting = user.name.split(' ')[0];
+  } else {
+    // For anonymous users, ask for their name in a natural way
+    userGreeting = 'there'; // Generic greeting, system should ask for name
+  }
+  
   const agentPrompts = {
-    knowledge: `You're a friendly career advisor. For "${query}", give practical advice in 1-2 conversational sentences. Sound human and relatable, then ask what they'd like to explore next.`,
-    schedule: `You're helping with timing and planning. For "${query}", give friendly scheduling advice in 1-2 sentences like you're talking to a friend. Ask what specific timeline they're working with.`,
-    cultural: `You understand the international student experience. For "${query}", give warm, culturally-aware advice in 1-2 sentences. Ask what specific cultural challenges they're facing.`,
-    voice: `You're a communication coach who gets it. For "${query}", give encouraging speaking advice in 1-2 sentences. Ask what communication situation they're preparing for.`,
-    booking: `You help connect people with advisors. For "${query}", provide smart booking assistance with context analysis using conversational, helpful language.`
+    knowledge: `You're a friendly career advisor helping ${userGreeting === 'there' ? 'a student' : userGreeting}. For "${query}", give practical advice in 1-2 conversational sentences. ${userGreeting === 'there' ? 'You can ask for their name to personalize the conversation better. ' : ''}Sound human and relatable, then ask what they'd like to explore next.`,
+    schedule: `You're helping ${userGreeting === 'there' ? 'someone' : userGreeting} with timing and planning. For "${query}", give friendly scheduling advice in 1-2 sentences like you're talking to a friend. ${userGreeting === 'there' ? 'Feel free to ask for their name to make the conversation more personal. ' : ''}Ask what specific timeline they're working with.`,
+    cultural: `You understand the international student experience and you're helping ${userGreeting === 'there' ? 'a student' : userGreeting}. For "${query}", give warm, culturally-aware advice in 1-2 sentences. ${userGreeting === 'there' ? 'You can ask for their name to better assist them. ' : ''}Ask what specific cultural challenges they're facing.`,
+    voice: `You're a communication coach helping ${userGreeting === 'there' ? 'someone' : userGreeting}. For "${query}", give encouraging speaking advice in 1-2 sentences. ${userGreeting === 'there' ? 'You might want to ask for their name to personalize your guidance. ' : ''}Ask what communication situation they're preparing for.`,
+    booking: `You help connect people with advisors. You're assisting ${userGreeting === 'there' ? 'someone' : userGreeting}. For "${query}", provide smart booking assistance with context analysis using conversational, helpful language.`
   };
 
   const prompt = agentPrompts[agent as keyof typeof agentPrompts] || agentPrompts.knowledge;
@@ -339,7 +378,28 @@ async function generateAgentResponse(
     // Use the existing Groq service to generate response
     const { generateResponse } = await import('@/lib/ai/groq');
     const mockIntent = { type: 'recommendation' as const, confidence: 0.8, entities: [], searchStrategy: 'hybrid' as const, clarificationNeeded: false };
-    const response = await generateResponse(query, searchResults.results || [], mockIntent);
+    
+    // Create enhanced context that includes user name handling
+    const enhancedResults = searchResults.results || [];
+    const response = await generateResponse(query, enhancedResults, mockIntent);
+    
+    // Post-process response to ensure proper name usage
+    if (response && userGreeting !== 'there') {
+      // Ensure we're not calling the user by a persona name
+      const personaNames = ['Rohan Patel', 'Li Wen', 'Hanh Nguyen', 'Tyler Brooks', 'Priya Singh', 'Sadia Rahman', 'Sandeep Shrestha', 'Kwame Mensah'];
+      let cleanedResponse = response;
+      
+      personaNames.forEach(personaName => {
+        const firstName = personaName.split(' ')[0];
+        // Replace any persona first names with the actual user's name
+        if (cleanedResponse.includes(firstName) && firstName !== userGreeting) {
+          cleanedResponse = cleanedResponse.replace(new RegExp(`\\b${firstName}\\b`, 'g'), userGreeting);
+        }
+      });
+      
+      return cleanedResponse;
+    }
+    
     return response;
   } catch (error) {
     console.error('Error generating response:', error);
@@ -359,90 +419,127 @@ function getFallbackResponse(query: string, agent: string): string {
 }
 
 function getFallbackSearchResults(query: string, agent: string) {
-  // Create realistic fallback data that demonstrates the system
-  const baseResults = [
+  const lowercaseQuery = query.toLowerCase();
+  
+  // Create dynamic results based on query content to recommend appropriate courses
+  const courseResults = [
     {
-      id: 'fallback-1',
-      content: 'Career guidance for international students focusing on skill development and job search strategies.',
+      id: 'business-analyst-fallback',
+      content: 'Business Analyst Bootcamp - 4 weeks, $740 AUD. Perfect for career changers with no coding experience. Focus on agile methodology, requirements gathering, and stakeholder management.',
       metadata: {
-        title: 'International Student Career Guide',
-        category: 'career',
-        contentType: 'career',
-        tags: ['career', 'international', 'students'],
-        careerPaths: ['business-analyst', 'data-analyst', 'full-stack-developer']
+        title: 'Business Analyst Bootcamp',
+        category: 'course',
+        contentType: 'course',
+        tags: ['business_analyst', 'bootcamp', 'career_change', 'no_coding'],
+        careerPaths: ['business-analyst']
       },
       score: 0.95
     },
     {
-      id: 'fallback-2', 
-      content: 'Technical interview preparation and portfolio development for bootcamp graduates.',
+      id: 'data-analyst-fallback',
+      content: 'Data & AI Analyst Bootcamp - 4 weeks, $740 AUD. Learn Python, SQL, data visualization, and AI tools. Perfect for analytical minds wanting to work with data.',
       metadata: {
-        title: 'Technical Interview Preparation',
-        category: 'skills',
-        contentType: 'tutorial',
-        tags: ['interview', 'technical', 'portfolio'],
-        careerPaths: ['full-stack-developer', 'data-analyst']
+        title: 'Data & AI Analyst Bootcamp',
+        category: 'course',
+        contentType: 'course',
+        tags: ['data_analyst', 'bootcamp', 'python', 'sql', 'ai'],
+        careerPaths: ['data-analyst']
       },
-      score: 0.88
+      score: 0.93
     },
     {
-      id: 'fallback-3',
-      content: 'Cultural adaptation and workplace integration strategies for career success.',
+      id: 'cybersecurity-fallback',
+      content: 'Cybersecurity Bootcamp - 4 weeks, $740 AUD. High-demand field focusing on cloud security, AWS, Azure, and compliance. Great for career changers.',
       metadata: {
-        title: 'Workplace Cultural Integration',
-        category: 'cultural',
-        contentType: 'concept',
-        tags: ['cultural', 'workplace', 'international'],
-        careerPaths: ['business-analyst', 'data-analyst']
+        title: 'Cybersecurity Bootcamp',
+        category: 'course',
+        contentType: 'course',
+        tags: ['cybersecurity', 'bootcamp', 'aws', 'azure', 'security'],
+        careerPaths: ['cybersecurity']
       },
-      score: 0.82
+      score: 0.91
+    },
+    {
+      id: 'fullstack-fallback',
+      content: 'Full Stack Developer Bootcamp - 4 weeks, $740 AUD. Modern web development with React, Node.js, and databases. For those who want to build applications.',
+      metadata: {
+        title: 'Full Stack Developer Bootcamp',
+        category: 'course',
+        contentType: 'course',
+        tags: ['full_stack_developer', 'bootcamp', 'react', 'nodejs', 'coding'],
+        careerPaths: ['full-stack-developer']
+      },
+      score: 0.89
     }
   ];
 
-  // Filter and customize based on agent type
-  const lowercaseQuery = query.toLowerCase();
+  // Smart matching based on query content
+  let relevantResults = [...courseResults];
   
+  if (lowercaseQuery.includes('data') || lowercaseQuery.includes('analyst') || lowercaseQuery.includes('python') || lowercaseQuery.includes('sql')) {
+    relevantResults = [courseResults[1], courseResults[0], courseResults[2]]; // Data first
+  } else if (lowercaseQuery.includes('cyber') || lowercaseQuery.includes('security') || lowercaseQuery.includes('aws') || lowercaseQuery.includes('azure')) {
+    relevantResults = [courseResults[2], courseResults[1], courseResults[0]]; // Cybersecurity first
+  } else if (lowercaseQuery.includes('developer') || lowercaseQuery.includes('coding') || lowercaseQuery.includes('react') || lowercaseQuery.includes('full stack')) {
+    relevantResults = [courseResults[3], courseResults[1], courseResults[0]]; // Full Stack first
+  } else if (lowercaseQuery.includes('business') || lowercaseQuery.includes('requirements') || lowercaseQuery.includes('agile') || lowercaseQuery.includes('no coding')) {
+    relevantResults = [courseResults[0], courseResults[1], courseResults[2]]; // Business Analyst first
+  }
+
+  // Filter and customize based on agent type
   if (agent === 'cultural') {
-    return baseResults.filter(r => r.metadata.tags.includes('cultural') || r.metadata.tags.includes('international'));
-  } else if (agent === 'schedule') {
-    return baseResults.map(r => ({
+    return relevantResults.map(r => ({
       ...r,
+      content: r.content + ' International student friendly with visa support.',
+      metadata: { ...r.metadata, tags: [...r.metadata.tags, 'international', 'visa_support'] }
+    }));
+  } else if (agent === 'schedule') {
+    return relevantResults.map(r => ({
+      ...r,
+      content: r.content + ' Flexible scheduling available. Book consultation to discuss timing.',
       metadata: { ...r.metadata, title: `Timeline: ${r.metadata.title}` }
     }));
   } else if (agent === 'voice') {
-    return baseResults.map(r => ({
+    return relevantResults.map(r => ({
       ...r,
+      content: r.content + ' Includes communication skills and interview preparation.',
       metadata: { ...r.metadata, title: `Communication: ${r.metadata.title}` }
     }));
   }
   
-  return baseResults;
+  return relevantResults.slice(0, 3); // Return top 3 matches
 }
 
-function getPersonaMatch(query: string): string {
+function getPersonaMatch(query: string, userSession?: any): string {
+  // IMPORTANT: This function should NOT be used to address the user
+  // It's only for finding similar student profiles for guidance reference
+  
+  // If we have a real user, don't use persona matching for identity
+  if (userSession?.user?.name) {
+    return `Reference: Similar to various student profiles`;
+  }
+  
   const lowercaseQuery = query.toLowerCase();
   
-  // Persona matching logic based on query content
+  // Only use persona matching for similarity reference, not user identity
   if (lowercaseQuery.includes('india') && lowercaseQuery.includes('career')) {
-    return 'Rohan Patel';
+    return 'Reference: Similar to Rohan Patel';
   } else if (lowercaseQuery.includes('china') || lowercaseQuery.includes('chinese')) {
-    return 'Li Wen';
+    return 'Reference: Similar to Li Wen';
   } else if (lowercaseQuery.includes('vietnam') || lowercaseQuery.includes('vietnamese')) {
-    return 'Hanh Nguyen';
+    return 'Reference: Similar to Hanh Nguyen';
   } else if (lowercaseQuery.includes('australia') && lowercaseQuery.includes('graduate')) {
-    return 'Tyler Brooks';
+    return 'Reference: Similar to Tyler Brooks';
   } else if (lowercaseQuery.includes('business analyst') || lowercaseQuery.includes('ba')) {
-    return 'Priya Singh';
+    return 'Reference: Similar to Priya Singh';
   } else if (lowercaseQuery.includes('data analyst') || lowercaseQuery.includes('data science')) {
-    return 'Sadia Rahman';
+    return 'Reference: Similar to Sadia Rahman';
   } else if (lowercaseQuery.includes('full stack') || lowercaseQuery.includes('developer')) {
-    return 'Sandeep Shrestha';
+    return 'Reference: Similar to Sandeep Shrestha';
   } else if (lowercaseQuery.includes('security') || lowercaseQuery.includes('cyber')) {
-    return 'Kwame Mensah';
+    return 'Reference: Similar to Kwame Mensah';
   } else {
-    // Default personas for common scenarios
-    const defaultPersonas = ['Rohan Patel', 'Li Wen', 'Priya Singh', 'Tyler Brooks'];
-    return defaultPersonas[Math.floor(Math.random() * defaultPersonas.length)];
+    return 'Reference: General student profile';
   }
 }
 
@@ -464,59 +561,124 @@ async function autoPopulateDatabase(): Promise<void> {
     {
       id: 'rohan-patel-auto',
       content: `Persona: Rohan Patel
-Category: Career Switcher
+Category: Career Switcher - Business Analytics
 Background: Rohan Patel is a 27-year-old from Mumbai, India, currently living in Wollongong, NSW, Australia. He completed his Bachelor's in Mechanical Engineering in India but pivoted to a Master's in Business Analytics at the University of Wollongong. Since graduating over a year ago, Rohan has struggled to land a relevant role in Australia's competitive market. He has applied for countless jobs in analytics, data, and ICT fields, but most responses are rejections. In the meantime, Rohan drives for Uber to cover living expenses, all while feeling mounting pressure as the months on his 485 post-study work visa tick away (he has 2.5 years left).
 Challenges: Feeling overwhelmed by job rejections, visa time pressure, driving Uber while overqualified, frustrated by lack of opportunities
-Goals: Get real project experience, secure ICT job, achieve permanent residency`,
-      tags: ['career_changer', 'international_student', 'business_analytics', 'visa_485', 'uber_driver', 'frustrated', 'overwhelmed']
+Goals: Get real project experience, secure ICT job, achieve permanent residency
+Recommended Course: Business Analyst Bootcamp - 4 weeks, $740 AUD. Perfect for his business analytics background and career change goals.`,
+      tags: ['career_changer', 'international_student', 'business_analytics', 'visa_485', 'uber_driver', 'frustrated', 'overwhelmed', 'business_analyst']
     },
     {
       id: 'sandeep-shrestha-auto',
       content: `Persona: Sandeep Shrestha
-Category: Recent Graduate  
+Category: Recent Graduate - Full Stack Development
 Background: Sandeep Shrestha is a 23-year-old from Nepal who recently completed his Bachelor's in Computer Science in Australia. He's looking to start his career as a Full Stack Developer but needs guidance on building a portfolio, preparing for technical interviews, and understanding the Australian job market. He has impressive MERN stack skills but lacks team experience.
 Challenges: Feeling lost about job market, needs portfolio guidance, lacks team experience
-Goals: Get first developer job in Australia, build professional portfolio, gain team experience`,
+Goals: Get first developer job in Australia, build professional portfolio, gain team experience
+Recommended Course: Full Stack Developer Bootcamp - 4 weeks, $740 AUD. Builds on his MERN knowledge with modern frameworks and industry practices.`,
       tags: ['recent_graduate', 'full_stack_developer', 'computer_science', 'portfolio', 'mern_stack', 'lost', 'career_guidance']
+    },
+    {
+      id: 'business-analyst-bootcamp',
+      content: `Business Analyst Bootcamp - 4 Week Program
+Price: $740 AUD (payment plans available at $185/week)
+Duration: 4 weeks intensive program
+Focus: Agile methodology, user story creation, requirements gathering, business process analysis, stakeholder management, prototyping
+Skills Developed: Requirements analysis, process mapping, data analysis fundamentals, communication skills, project management basics
+Target Audience: Career changers, non-technical professionals, anyone wanting to bridge business and technology
+Prerequisites: No coding experience required, basic computer literacy sufficient
+Career Outcomes: Business Analyst, Product Owner, Process Analyst, Systems Analyst roles
+Industry Project: Optional 6-week live project ($790 AUD) working with real clients
+Next Steps: Book consultation to discuss career goals and program fit`,
+      tags: ['business_analyst', 'bootcamp', 'agile', 'requirements', 'career_change', 'no_coding', 'course_info']
+    },
+    {
+      id: 'data-ai-analyst-bootcamp',
+      content: `Data & AI Analyst Bootcamp - 4 Week Program
+Price: $740 AUD (payment plans available at $185/week)
+Duration: 4 weeks intensive program
+Focus: Python programming, SQL databases, data visualization, dashboard creation, AI tools integration, statistical analysis
+Skills Developed: Data cleaning and analysis, Python programming, database querying, Power BI/Tableau, machine learning basics, AI tool usage
+Target Audience: Data enthusiasts, analysts, professionals wanting to leverage AI in their work
+Prerequisites: Basic computer skills, some technical aptitude helpful but not required
+Career Outcomes: Data Analyst, Business Intelligence Analyst, AI-assisted Analyst, Reporting Specialist roles
+Industry Project: Optional 6-week live project ($790 AUD) working with real client data
+Next Steps: Book consultation to assess technical readiness and career alignment`,
+      tags: ['data_analyst', 'ai_analyst', 'bootcamp', 'python', 'sql', 'data_visualization', 'course_info']
+    },
+    {
+      id: 'cybersecurity-bootcamp',
+      content: `Cybersecurity Bootcamp - 4 Week Program
+Price: $740 AUD (payment plans available at $185/week)
+Duration: 4 weeks intensive program
+Focus: Cloud security in AWS and Azure, risk assessment, compliance frameworks, security monitoring, incident response
+Skills Developed: AWS Security, Azure Security, IAM management, security policies, threat detection, vulnerability assessment
+Target Audience: IT professionals, career changers seeking high-demand field, security-minded individuals
+Prerequisites: Basic IT understanding helpful, willingness to learn technical concepts
+Career Outcomes: Cloud Security Specialist, Cybersecurity Analyst, Security Consultant, Compliance Officer roles
+Industry Project: Optional 6-week live project ($790 AUD) securing real client environments
+Next Steps: Book consultation to discuss technical background and security career goals`,
+      tags: ['cybersecurity', 'bootcamp', 'aws', 'azure', 'cloud_security', 'compliance', 'course_info']
+    },
+    {
+      id: 'fullstack-developer-bootcamp',
+      content: `Full Stack Developer Bootcamp - 4 Week Program
+Price: $740 AUD (payment plans available at $185/week)
+Duration: 4 weeks intensive program
+Focus: Modern web development, React/Next.js frontend, Node.js backend, database integration, deployment strategies
+Skills Developed: Frontend development (React, HTML, CSS, JavaScript), backend development (Node.js, APIs), database management, version control (Git), deployment
+Target Audience: Aspiring developers, career changers into tech, professionals wanting to build applications
+Prerequisites: Basic computer skills, logical thinking, willingness to learn coding concepts
+Career Outcomes: Frontend Developer, Backend Developer, Full Stack Developer, Web Developer roles
+Industry Project: Optional 6-week live project ($790 AUD) building real client applications
+Next Steps: Book consultation to assess coding aptitude and discuss development career path`,
+      tags: ['full_stack_developer', 'bootcamp', 'react', 'nodejs', 'web_development', 'coding', 'course_info']
     },
     {
       id: 'visa-course-guidance',
       content: `International Student Support and Course Scheduling
 Visa Support: Comprehensive guidance for international students on 485, 500, and other visa types
-Course Scheduling: Flexible scheduling options that accommodate visa requirements and work restrictions  
+Course Scheduling: All 4 bootcamp tracks designed to fit visa requirements and work restrictions
+Available Courses: Business Analyst ($740), Data & AI Analyst ($740), Cybersecurity ($740), Full Stack Developer ($740)
+Timeline: 4-week intensive programs with optional 6-week industry projects
 Human Support: Academic advisors and international student counselors available for personalized guidance
-Calendar Integration: Online booking systems to schedule appointments with advisors
-Contact Process: Students can schedule consultations through online calendar systems or contact student services directly
-Course Information: Detailed information about cybersecurity bootcamps, data analytics courses, and career transition programs
-Prerequisites: Most programs designed for beginners with basic IT understanding, no advanced coding required`,
-      tags: ['visa_support', 'course_scheduling', 'international_students', 'calendar', 'academic_advising', 'cybersecurity', 'data_course', 'human_support']
-    },
-    {
-      id: 'cybersecurity-bootcamp',
-      content: `Cybersecurity Course Information
-Program: Cyber Security Bootcamp - 4-week intensive program
-Focus: Cloud security challenges in AWS and Azure environments
-Technologies: AWS Security, Azure Security, IAM, API Security, Cloud Protection
-Contact: Course advisors available to discuss curriculum, prerequisites, and enrollment
-Scheduling: Flexible scheduling options available, contact academic advisors
-Career Outcomes: Prepares students for cloud security specialist, cybersecurity analyst, and security consultant roles
-Support: Dedicated support for international students and career changers`,
-      tags: ['cybersecurity', 'bootcamp', 'aws', 'azure', 'cloud_security', 'course_info', 'career_change', 'scheduling']
+Calendar Integration: Online booking systems to schedule consultations with course advisors
+Contact Process: Students can book consultations to discuss which track best fits their background and goals
+Prerequisites: Most programs designed for beginners with basic understanding, no advanced experience required`,
+      tags: ['visa_support', 'course_scheduling', 'international_students', 'all_courses', 'academic_advising', 'consultation']
     }
   ];
 
   const vectors = essentialPersonas.map((persona) => {
+    // Determine career path based on content
+    let careerPaths = ['business-analyst', 'full-stack-developer', 'data-analyst', 'cybersecurity'];
+    let primaryCareerPath = 'business-analyst';
+    
+    if (persona.id.includes('business-analyst') || persona.content.includes('Business Analyst')) {
+      primaryCareerPath = 'business-analyst';
+      careerPaths = ['business-analyst'];
+    } else if (persona.id.includes('data-ai') || persona.content.includes('Data & AI')) {
+      primaryCareerPath = 'data-analyst';
+      careerPaths = ['data-analyst'];
+    } else if (persona.id.includes('cybersecurity') || persona.content.includes('Cybersecurity')) {
+      primaryCareerPath = 'cybersecurity';
+      careerPaths = ['cybersecurity'];
+    } else if (persona.id.includes('fullstack') || persona.content.includes('Full Stack')) {
+      primaryCareerPath = 'full-stack-developer';
+      careerPaths = ['full-stack-developer'];
+    }
+
     const metadata: VectorMetadata = {
       id: persona.id,
       title: persona.content.split('\n')[0].replace('Persona: ', '').replace('Program: ', '').replace('International Student Support', 'Student Support'),
       content: persona.content,
-      category: 'career',
-      contentType: 'career' as const,
+      category: persona.id.includes('bootcamp') ? 'course' : 'career',
+      contentType: persona.id.includes('bootcamp') ? 'course' as const : 'career' as const,
       difficulty: 'intermediate' as const,
       prerequisites: [],
       leadsTo: [],
       relatedConcepts: [],
-      careerPaths: ['business-analyst', 'full-stack-developer', 'data-analyst'],
+      careerPaths: careerPaths,
       tags: persona.tags,
       confidenceScore: 0.95,
       createdAt: new Date().toISOString(),
@@ -591,6 +753,22 @@ function getSimpleAgentRouting(query: string): string {
 }
 
 function getAgentSpecificFallbackResponse(query: string, agent: string): string {
+  const lowercaseQuery = query.toLowerCase();
+  
+  // Smart course recommendation based on query content
+  let courseRecommendation = '';
+  if (lowercaseQuery.includes('data') || lowercaseQuery.includes('python') || lowercaseQuery.includes('sql')) {
+    courseRecommendation = 'Data & AI Analyst';
+  } else if (lowercaseQuery.includes('cyber') || lowercaseQuery.includes('security') || lowercaseQuery.includes('aws')) {
+    courseRecommendation = 'Cybersecurity';
+  } else if (lowercaseQuery.includes('developer') || lowercaseQuery.includes('coding') || lowercaseQuery.includes('react')) {
+    courseRecommendation = 'Full Stack Developer';
+  } else if (lowercaseQuery.includes('business') || lowercaseQuery.includes('requirements') || lowercaseQuery.includes('no coding')) {
+    courseRecommendation = 'Business Analyst';
+  } else {
+    courseRecommendation = 'Business Analyst, Data & AI Analyst, Cybersecurity, or Full Stack Developer';
+  }
+
   const responses = {
     schedule: `Hey! I can totally help you figure out the timing for your career steps. What's your timeline looking like?`,
 
@@ -598,7 +776,7 @@ function getAgentSpecificFallbackResponse(query: string, agent: string): string 
 
     voice: `Communication skills are so important! Whether it's interviews or presentations, I'm here to help. What situation are you preparing for?`,
 
-    knowledge: `Career paths in Australia can be confusing, but you're in the right place! Are you thinking Business Analyst, Data Analyst, or exploring other options?`,
+    knowledge: `Career paths in Australia can be confusing, but you're in the right place! Are you thinking ${courseRecommendation}? All our 4-week bootcamps are $740 AUD with payment plans available.`,
 
     booking: `Perfect! Let me help you get connected with Kevin for some personalized guidance. I'll make sure he has all the context about your situation before you chat.`
   };

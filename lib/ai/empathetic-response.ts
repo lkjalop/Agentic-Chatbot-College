@@ -77,6 +77,11 @@ YOUR APPROACH:
 - ALWAYS mention timeline (4 weeks)
 - Always end with clear next step (book consultation or enroll)
 
+CRITICAL: NEVER use persona names when addressing the user
+- Use generic terms: "Hi!", "Hey there!", or no greeting at all
+- Don't say "Hi Camila" or "Hey Sofia" - just say "Hi!" or "Hello!"
+- Use background info for context but NOT for addressing them by name
+
 MANDATORY: Every response MUST include:
 1. Specific pricing: "$740 AUD" or "$185/week payment plans"
 2. Timeline: "4 weeks" or "4-week bootcamp"
@@ -163,14 +168,17 @@ function buildEnhancedContext(searchResults: any[], detection: PersonaDetectionR
 function buildPersonalizedUserPrompt(query: string, detection: PersonaDetectionResult): string {
   let prompt = `STUDENT QUESTION: ${query}`;
   
-  // Add persona context if detected  
-  if (detection.confidence > 25) {
-    prompt += `\n\nPERSONA DETECTED: ${detection.persona?.archetypeName || 'Student'}`;
+  // Add persona context if detected (without using persona name)
+  if (detection.confidence > 15) {
+    prompt += `\n\nSTUDENT BACKGROUND DETECTED:`;
     if (detection.persona?.visaType) {
-      prompt += ` (${detection.persona.visaType} visa)`;
+      prompt += ` ${detection.persona.visaType} visa holder`;
     }
     if (detection.persona?.previousField) {
-      prompt += ` - Background: ${detection.persona.previousField}`;
+      prompt += ` - Previous field: ${detection.persona.previousField}`;
+    }
+    if (detection.persona?.isRegional) {
+      prompt += ` - Regional area student`;
     }
   }
   
@@ -218,10 +226,38 @@ async function enhanceResponseForPersona(
 }
 
 function generateFallbackResponse(detection: PersonaDetectionResult, query: string): string {
-  let response = "Hey! I'd love to help you figure out if our Business Analyst bootcamp is a good fit for you.";
+  // Determine which track the query is about
+  const queryLower = query.toLowerCase();
+  let trackResponse = "";
+  
+  if (queryLower.includes('no coding') || queryLower.includes('without coding') || (queryLower.includes('marketing') && queryLower.includes('tech'))) {
+    trackResponse = "our Business Analyst bootcamp";
+  } else if (queryLower.includes('data') || queryLower.includes('analyst') || queryLower.includes('ai') || queryLower.includes('python')) {
+    trackResponse = "our Data & AI Analyst bootcamp";
+  } else if (queryLower.includes('cyber') || queryLower.includes('security')) {
+    trackResponse = "our Cybersecurity bootcamp";
+  } else if (queryLower.includes('code') || queryLower.includes('coding') || queryLower.includes('website') || queryLower.includes('developer') || queryLower.includes('full stack')) {
+    trackResponse = "our Full Stack Developer bootcamp";
+  } else if (queryLower.includes('business') || queryLower.includes('marketing')) {
+    trackResponse = "our Business Analyst bootcamp";
+  } else {
+    trackResponse = "our bootcamp programs - we have Business Analyst, Data & AI, Cybersecurity, and Full Stack Developer tracks";
+  }
+  
+  let response = `Hey! I'd love to help you figure out if ${trackResponse} is a good fit for you.`;
   
   // Add specific bootcamp info
-  response += " It's a 4-week program ($740 AUD or $185/week payments) that gets you job-ready for entry-level BA roles.";
+  if (trackResponse.includes("Business Analyst")) {
+    response += " It's a 4-week program ($740 AUD or $185/week payments) that gets you job-ready for entry-level BA roles.";
+  } else if (trackResponse.includes("Data & AI")) {
+    response += " It's a 4-week program ($740 AUD or $185/week payments) covering Python, SQL, dashboards, and AI tools.";
+  } else if (trackResponse.includes("Cybersecurity")) {
+    response += " It's a 4-week program ($740 AUD or $185/week payments) covering AWS security, compliance, and risk management.";
+  } else if (trackResponse.includes("Full Stack")) {
+    response += " It's a 4-week program ($740 AUD or $185/week payments) covering modern web development.";
+  } else {
+    response += " Each track is 4 weeks and costs $740 AUD (or $185/week payments).";
+  }
   
   // Add persona-specific context if detected
   if (detection.persona?.visaType === '485') {

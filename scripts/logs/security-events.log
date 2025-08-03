@@ -1,0 +1,4 @@
+{"timestamp":"2025-08-03T09:56:09.368Z","channel":"chat","sessionId":"test","userId":"test","blocked":true,"reason":"critical_pii_detected","flags":["credit_card"],"humanEscalation":true}
+{"timestamp":"2025-08-03T09:56:09.373Z","channel":"chat","sessionId":"test","userId":"test","blocked":true,"reason":"critical_pii_detected","flags":["us_ssn"],"humanEscalation":true}
+{"timestamp":"2025-08-03T09:56:09.373Z","channel":"chat","sessionId":"test","userId":"test","blocked":true,"reason":"critical_pii_detected","flags":["australian_tfn"],"humanEscalation":true}
+{"timestamp":"2025-08-03T09:56:09.374Z","channel":"chat","sessionId":"test","userId":"test","blocked":false,"reason":"","flags":[],"humanEscalation":false}
