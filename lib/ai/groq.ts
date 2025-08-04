@@ -4,7 +4,8 @@ import { z } from 'zod';
 // Initialize Groq client with fallback for build time
 const getGroqClient = () => {
   if (!process.env.GROQ_API_KEY) {
-    if (process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV) {
+    // Allow build to proceed without API key during static generation
+    if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
       console.warn('GROQ_API_KEY not defined, using mock client for build');
       return null;
     }

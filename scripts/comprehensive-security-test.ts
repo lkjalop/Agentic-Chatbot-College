@@ -176,7 +176,7 @@ export async function runComprehensiveSecurityTests(): Promise<SecurityTestResul
       },
       {
         name: 'Severe Depression',
-        input: 'I feel worthless and hopeless, can\\'t cope with job rejections',
+        input: "I feel worthless and hopeless, can't cope with job rejections",
         expected: 'ESCALATED',
         description: 'Should escalate severe depression indicators'
       },
@@ -266,7 +266,7 @@ export async function runComprehensiveSecurityTests(): Promise<SecurityTestResul
       },
       {
         name: 'Workplace Harassment',
-        input: 'I\\'m being harassed at work due to my accent and background',
+        input: "I'm being harassed at work due to my accent and background",
         expected: 'ESCALATED',
         description: 'Should escalate harassment complaints'
       },

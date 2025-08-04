@@ -1,9 +1,21 @@
 import Groq from 'groq-sdk';
 import { PersonaDetectionResult } from '@/lib/personas/persona-detector';
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+// Initialize Groq client with build-time fallback
+const getGroqClient = () => {
+  if (!process.env.GROQ_API_KEY) {
+    if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+      console.warn('GROQ_API_KEY not defined, using mock client for build');
+      return null;
+    }
+    throw new Error('GROQ_API_KEY is not defined');
+  }
+  return new Groq({
+    apiKey: process.env.GROQ_API_KEY,
+  });
+};
+
+const groq = getGroqClient();
 
 interface EmpatheticResponseOptions {
   query: string;
@@ -18,6 +30,10 @@ export async function generateEmpatheticResponse({
   searchResults,
   conversationHistory = []
 }: EmpatheticResponseOptions): Promise<string> {
+  // Handle case where Groq client is not available during build
+  if (!groq) {
+    return `Based on your query about "${query}", I'd be happy to help you with career guidance. Please note that enhanced AI features require proper configuration.`;
+  }
   try {
     const systemPrompt = buildPersonaAwareSystemPrompt(personaDetection);
     const enhancedContext = buildEnhancedContext(searchResults, personaDetection);

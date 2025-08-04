@@ -12,11 +12,25 @@ import { batchUpsertVectors, VectorMetadata } from '@/lib/vector';
 import { cache, createCacheKey, hashObject } from '@/lib/utils/cache';
 import { BasicSecurityAgent } from '@/lib/security/basic-security-agent';
 import { ResponseValidator } from '@/lib/security/response-validator';
+import { SemanticCache } from '@/lib/cache/semantic-cache';
+import { CRAGMonitor } from '@/lib/monitoring/crag-monitor';
 
 const security = new BasicSecurityAgent();
 const responseValidator = new ResponseValidator();
+const semanticCache = new SemanticCache({ maxEntries: 50, ttlMs: 24 * 60 * 60 * 1000 }); // 24 hour cache
+const cragMonitor = new CRAGMonitor();
+
+// Warm cache on startup
+let cacheWarmed = false;
+const warmCacheOnce = async () => {
+  if (!cacheWarmed) {
+    await semanticCache.warmCache();
+    cacheWarmed = true;
+  }
+};
 
 export async function POST(request: NextRequest) {
+  const processingStartTime = Date.now(); // Track processing time
   try {
     const session = await getServerSession();
     const body = await request.json();
@@ -159,6 +173,26 @@ export async function POST(request: NextRequest) {
       selectedAgent = getSimpleAgentRouting(query);
     }
     
+    // CRAG Query Classification - Lean Implementation
+    const shouldUseCRAG = (query: string, userContext?: any) => {
+      // High-value triggers for enhanced processing
+      const highValuePatterns = [
+        /visa|immigration|work rights/i,
+        /career.{0,10}change|change.{0,10}career|transition/i,
+        /international student/i,
+        /course comparison|compare.*course|compare.*bootcamp/i,
+        /job market|salary|industry trends/i,
+        /prerequisites|requirements/i
+      ];
+      
+      return highValuePatterns.some(pattern => pattern.test(query)) ||
+             query.length > 100 || // Complex queries
+             (userContext && userContext.isPremium); // Premium users get enhanced processing
+    };
+
+    const useCRAGProcessing = shouldUseCRAG(query, user);
+    console.log(`🎯 CRAG Classification: ${useCRAGProcessing ? 'Enhanced' : 'Fast'} path for query: "${query.substring(0, 50)}..."`);
+
     // Use PersonaAwareRouter if persona detection is enabled
     let searchResults;
     let personaDetection;
@@ -187,7 +221,12 @@ export async function POST(request: NextRequest) {
         searchResults = await performStandardSearch(query, limit, filters);
       }
     } else {
-      searchResults = await performStandardSearch(query, limit, filters);
+      // Apply CRAG-enhanced processing if classified as high-value
+      if (useCRAGProcessing) {
+        searchResults = await performEnhancedSearch(query, limit, filters, selectedAgent);
+      } else {
+        searchResults = await performStandardSearch(query, limit, filters);
+      }
     }
 
     // Auto-populate database if empty (first-time deployment)
@@ -271,8 +310,11 @@ export async function POST(request: NextRequest) {
     // Generate response based on search results and selected agent
     let response;
     try {
-      // NEW: Use persona-aware response if available (from improved system)
-      if (personaAwareResponse) {
+      // NEW: Use cached response if available from semantic cache
+      if (finalResults.fromCache && finalResults.cacheResponse) {
+        response = finalResults.cacheResponse;
+        console.log(`Using cached enhanced response: ${response.substring(0, 100)}...`);
+      } else if (personaAwareResponse) {
         response = personaAwareResponse;
         console.log(`Using persona-aware response: ${response.substring(0, 100)}...`);
       } else {
@@ -295,6 +337,20 @@ export async function POST(request: NextRequest) {
     // Use the sanitized response
     const finalResponse = validationResult.sanitizedResponse;
 
+    // Record CRAG performance metrics
+    const processingEndTime = Date.now();
+    const totalProcessingTime = processingEndTime - processingStartTime;
+    
+    cragMonitor.recordQuery({
+      query,
+      classification: useCRAGProcessing ? 'enhanced' : 'fast',
+      processingTimeMs: totalProcessingTime,
+      cacheHit: finalResults.fromCache || false,
+      agent: selectedAgent,
+      resultCount: finalResults.results?.length || 0,
+      confidence: intent.confidence || 0.8
+    });
+
     // Generate diagnostic information for the UI
     const diagnostics = {
       agent: selectedAgent,
@@ -311,6 +367,23 @@ export async function POST(request: NextRequest) {
         .map((r: any) => r.metadata?.title || r.title || 'Knowledge Base')
         .filter(Boolean),
       reasoning: generateReasoning(intent.type, selectedAgent, query),
+      crag: {
+        enabled: useCRAGProcessing,
+        processingPath: useCRAGProcessing ? 'enhanced' : 'fast',
+        qualityEnhanced: finalResults.enhanced || false,
+        originalResultCount: searchResults.results?.length || 0,
+        finalResultCount: finalResults.results?.length || 0,
+        semanticCache: {
+          used: finalResults.fromCache || false,
+          agent: finalResults.cacheAgent || null,
+          stats: semanticCache.getStats()
+        },
+        performance: {
+          processingTimeMs: totalProcessingTime,
+          healthStatus: cragMonitor.getHealthStatus(),
+          insights: cragMonitor.getInsights().slice(0, 2) // Top 2 insights
+        }
+      },
       validation: {
         isValid: validationResult.isValid,
         violations: validationResult.violations,
@@ -801,6 +874,81 @@ function getAgentSpecificFallbackResponse(query: string, agent: string): string 
   };
 
   return responses[agent as keyof typeof responses] || responses.knowledge;
+}
+
+async function performEnhancedSearch(query: string, limit: number, filters: any, agent: string) {
+  try {
+    console.log(`🚀 Enhanced CRAG processing for ${agent} agent`);
+    
+    // Step 0: Warm cache if needed (async, don't wait)
+    warmCacheOnce().catch(console.warn);
+    
+    // Step 1: Check semantic cache first
+    const cachedResult = semanticCache.findSimilar(query);
+    if (cachedResult) {
+      console.log(`⚡ Semantic cache hit - instant enhanced results`);
+      return {
+        success: true,
+        results: cachedResult.results,
+        enhanced: true,
+        fromCache: true,
+        cacheResponse: cachedResult.response,
+        cacheAgent: cachedResult.agent
+      };
+    }
+    
+    // Step 2: Get standard results if no cache hit
+    const standardResults = await performStandardSearch(query, limit * 2, filters); // Get more for filtering
+    
+    if (!standardResults.success || !standardResults.results?.length) {
+      console.log('⚠️ No standard results, falling back to standard search');
+      return standardResults;
+    }
+    
+    // Step 2: Apply lean CRAG evaluation - filter by relevance
+    const enhancedResults = standardResults.results
+      .filter(result => {
+        // Basic quality thresholds
+        const hasGoodScore = result.score && result.score > 0.5;
+        const hasContent = result.content && result.content.length > 50;
+        const hasRelevantMetadata = result.metadata && 
+          (result.metadata.category === 'course' || result.metadata.category === 'career');
+        
+        return hasGoodScore && hasContent && hasRelevantMetadata;
+      })
+      .slice(0, limit); // Take only what we need
+    
+    // Step 3: Add enhanced metadata for high-value queries
+    const finalResults = enhancedResults.map(result => ({
+      ...result,
+      metadata: {
+        ...result.metadata,
+        enhanced: true,
+        cragProcessed: true,
+        processingTime: new Date().toISOString()
+      }
+    }));
+    
+    console.log(`✅ CRAG enhanced: ${standardResults.results.length} → ${finalResults.length} results`);
+    
+    // Step 4: Generate and cache response for future similar queries
+    try {
+      const enhancedResponse = await generateAgentResponse(query, agent, { results: finalResults }, null);
+      semanticCache.store(query, finalResults, enhancedResponse, agent, 0.9);
+    } catch (error) {
+      console.warn('Failed to cache enhanced response:', error);
+    }
+    
+    return {
+      success: true,
+      results: finalResults,
+      enhanced: true
+    };
+    
+  } catch (error) {
+    console.warn('❌ Enhanced search failed, falling back to standard:', error);
+    return await performStandardSearch(query, limit, filters);
+  }
 }
 
 async function performStandardSearch(query: string, limit: number, filters: any) {

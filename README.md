@@ -14,6 +14,11 @@ Built an intelligent bootcamp advisor that routes students to the right track fr
 
 ## 📖 **How to Explore This Project**
 
+**🚀 For Future Vision & Roadmap:**
+- Read: `FUTURE_ROADMAP.md` - Comprehensive development roadmap through 2026
+- Focus: Phase 1 (Enhanced Safety) and Phase 2 (Scalability) 
+- Review: Enterprise features, global expansion, and monetization strategy
+
 **👥 For Hiring Managers & Business Reviewers:**
 - Read: `HIRING_MANAGER_DEMO_GUIDE.md` - Business demo guide with talking points
 - Then: Continue with "Business Context & Market Fit" section below
@@ -29,10 +34,11 @@ Built an intelligent bootcamp advisor that routes students to the right track fr
 - Demo: Visit live deployment (credentials in demo guide)
 
 **🛡️ For Security Analysis:**
+- Read: `SAFETY_PROTOCOL.md` - Complete safety implementation guide
 - Read: `SHIFT_LEFT_SECURITY.md` - Comprehensive shift-left security implementation
 - Focus: "Security & Compliance Roadmap" section below  
 - Review: `lib/security/basic-security-agent.ts` implementation
-- Test: Security scanning with malicious inputs
+- Test: Run `npm run test:safety` for crisis detection validation
 
 ---
 

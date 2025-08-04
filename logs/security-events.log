@@ -247,3 +247,15 @@
 {"timestamp":"2025-08-04T08:17:21.052Z","channel":"chat","sessionId":"test-session","userId":"test-user","blocked":true,"reason":"crisis_intervention","flags":["critical_crisis"],"humanEscalation":true}
 {"timestamp":"2025-08-04T08:17:21.060Z","channel":"chat","sessionId":"test-session","userId":"test-user","blocked":true,"reason":"crisis_intervention","flags":["critical_crisis"],"humanEscalation":true}
 {"timestamp":"2025-08-04T08:17:21.062Z","channel":"chat","sessionId":"test-session","userId":"test-user","blocked":false,"reason":"emotional_support_needed","flags":["emotional_distress"],"humanEscalation":false}
+{"timestamp":"2025-08-04T14:20:10.037Z","channel":"chat","sessionId":"test-session","userId":"test-user","blocked":true,"reason":"crisis_intervention","flags":["critical_crisis"],"humanEscalation":true}
+{"timestamp":"2025-08-04T14:20:10.045Z","channel":"chat","sessionId":"test-session","userId":"test-user","blocked":false,"reason":"","flags":[],"humanEscalation":false}
+{"timestamp":"2025-08-04T14:20:10.047Z","channel":"chat","sessionId":"test-session","userId":"test-user","blocked":false,"reason":"","flags":[],"humanEscalation":false}
+{"timestamp":"2025-08-04T14:20:10.048Z","channel":"chat","sessionId":"test-session","userId":"test-user","blocked":true,"reason":"crisis_intervention","flags":["depression_crisis","critical_crisis"],"humanEscalation":true}
+{"timestamp":"2025-08-04T14:20:10.049Z","channel":"chat","sessionId":"test-session","userId":"test-user","blocked":true,"reason":"crisis_intervention","flags":["critical_crisis"],"humanEscalation":true}
+{"timestamp":"2025-08-04T14:20:10.050Z","channel":"chat","sessionId":"test-session","userId":"test-user","blocked":false,"reason":"emotional_support_needed","flags":["emotional_distress"],"humanEscalation":false}
+{"timestamp":"2025-08-04T14:41:28.586Z","channel":"chat","sessionId":"test-session","userId":"test-user","blocked":true,"reason":"crisis_intervention","flags":["critical_crisis"],"humanEscalation":true}
+{"timestamp":"2025-08-04T14:41:28.591Z","channel":"chat","sessionId":"test-session","userId":"test-user","blocked":false,"reason":"","flags":[],"humanEscalation":false}
+{"timestamp":"2025-08-04T14:41:28.592Z","channel":"chat","sessionId":"test-session","userId":"test-user","blocked":false,"reason":"","flags":[],"humanEscalation":false}
+{"timestamp":"2025-08-04T14:41:28.593Z","channel":"chat","sessionId":"test-session","userId":"test-user","blocked":true,"reason":"crisis_intervention","flags":["depression_crisis","critical_crisis"],"humanEscalation":true}
+{"timestamp":"2025-08-04T14:41:28.593Z","channel":"chat","sessionId":"test-session","userId":"test-user","blocked":true,"reason":"crisis_intervention","flags":["critical_crisis"],"humanEscalation":true}
+{"timestamp":"2025-08-04T14:41:28.594Z","channel":"chat","sessionId":"test-session","userId":"test-user","blocked":false,"reason":"emotional_support_needed","flags":["emotional_distress"],"humanEscalation":false}
