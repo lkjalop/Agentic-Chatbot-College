@@ -105,7 +105,7 @@ MANDATORY: Every response MUST include:
 
   // Next step guidance based on journey stage
   if (journeyStage === 'research' || journeyStage === 'awareness') {
-    basePrompt += `\n\nEND WITH: Offer to book a quick chat with an advisor to get personalized advice.`;
+    basePrompt += `\n\nEND WITH: Offer to book a quick chat with our student success coordinator to get personalized advice.`;
   } else if (journeyStage === 'decision') {
     basePrompt += `\n\nEND WITH: Ask if they want to secure their spot or talk through any final concerns.`;
   } else {

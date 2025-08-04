@@ -69,7 +69,16 @@ export class BasicSecurityAgent {
     const contentIssues = this.simpleContentModeration(input.content);
     if (contentIssues.length > 0) {
       flags.push(...contentIssues);
-      // Don't block for content issues, just flag
+      
+      // CRITICAL: Block immediately for crisis situations
+      if (contentIssues.includes('critical_crisis')) {
+        blocked = true;
+        reason = 'crisis_intervention';
+      }
+      // Flag emotional distress for special handling
+      else if (contentIssues.includes('emotional_distress')) {
+        reason = 'emotional_support_needed';
+      }
     }
 
     // Check if should escalate to human
@@ -88,7 +97,14 @@ export class BasicSecurityAgent {
     });
 
     if (blocked || needsHumanEscalation) {
-      const responseReason = needsHumanEscalation ? 'compliance_concern' : reason;
+      // CRITICAL: Preserve crisis intervention reason - don't override with compliance_concern
+      let responseReason = reason;
+      if (reason === 'crisis_intervention') {
+        responseReason = 'crisis_intervention';
+      } else if (needsHumanEscalation && !blocked) {
+        responseReason = 'compliance_concern';
+      }
+      
       return {
         allowed: false,
         reason: responseReason,
@@ -284,9 +300,39 @@ export class BasicSecurityAgent {
   private simpleContentModeration(content: string): string[] {
     const issues: string[] = [];
 
-    // Self-harm detection (flag for special handling)
-    if (/\b(suicide|self.?harm|end my life|kill myself)\b/i.test(content)) {
-      issues.push('self_harm_risk');
+    // Critical crisis detection - expanded patterns as per safety protocol
+    const criticalCrisisPatterns = [
+      /jump off a bridge/i,
+      /end it all/i,
+      /don't want to be here anymore/i,
+      /hurt myself/i,
+      /hurting myself/i,
+      /kill myself/i,
+      /better off dead/i,
+      /nothing matters/i,
+      /want to disappear/i,
+      /thinking about.*hurt/i,
+      /\bsuicide\b/i,
+      /self.?harm/i,
+      /end my life/i
+    ];
+
+    if (criticalCrisisPatterns.some(pattern => pattern.test(content))) {
+      issues.push('critical_crisis');
+    }
+
+    // Emotional distress detection (non-crisis)
+    const emotionalDistressPatterns = [
+      /\boverwhelmed\b/i,
+      /stressed out/i,
+      /don't know what to do/i,
+      /everything is hard/i,
+      /can't handle this/i,
+      /too much pressure/i
+    ];
+
+    if (emotionalDistressPatterns.some(pattern => pattern.test(content))) {
+      issues.push('emotional_distress');
     }
 
     // Harassment/hate speech
@@ -345,6 +391,12 @@ export class BasicSecurityAgent {
       rate_limit_exceeded: "You're sending messages very quickly. If this is urgent and you need immediate assistance, I can connect you with a human advisor. Otherwise, please wait a moment before continuing.",
 
       compliance_concern: "I want to make sure I handle your information properly according to privacy laws. For questions involving personal data or complex situations, I can connect you with a human advisor who can assist you directly. Would you like to book a session with one of our counselors?",
+
+      // CRISIS INTERVENTION - Highest Priority Response
+      crisis_intervention: "I'm concerned about what you've shared and want to make sure you're safe. Please reach out to someone right now - a trusted friend, family member, or crisis hotline. If you're in immediate danger, please call emergency services or a crisis hotline like 988 (Suicide & Crisis Lifeline) or Lifeline at 13 11 14 in Australia. Please consider speaking with a counselor or mental health professional. Your safety is the most important thing right now.",
+
+      // EMOTIONAL SUPPORT - De-escalation Response
+      emotional_support_needed: "It sounds like you're going through a challenging time right now. Many students feel this way when considering career changes - you're not alone in feeling overwhelmed. It might be helpful to talk through your concerns with our student success coordinator before making any big decisions. Would you prefer to start with a brief 15-minute check-in call instead of a full consultation?",
 
       // Mental health crisis responses
       suicide_risk: "I'm very concerned about you and want to make sure you get the right support. Please reach out to a mental health professional immediately. In Australia, you can call Lifeline at 13 11 14 (24/7). I can also connect you with one of our counselors who are trained to help. You're not alone.",
@@ -422,11 +474,24 @@ export class BasicSecurityAgent {
       flags.push('malicious_intent');
     }
 
-    // Violence indicators
+    // Violence indicators (excluding self-harm which is handled by crisis detection)
     const violencePatterns = [
-      /\bkill\w*/i, /murder/i, /\battack\w*/i, /\bhurt\w*/i,
-      /violence/i, /\bbeat\w*/i, /assault/i, /weapon/i
+      /murder/i, 
+      /\battack\w*/i, 
+      /violence/i, 
+      /\bbeat\w*/i, 
+      /assault/i, 
+      /weapon/i
     ];
+    
+    // Only add kill/hurt patterns if they're not self-referential
+    if (!/\bhurt\w*\s+myself/i.test(content) && /\bhurt\w*/i.test(content)) {
+      violencePatterns.push(/\bhurt\w*/i);
+    }
+    
+    if (!/\bkill\w*\s+myself/i.test(content) && /\bkill\w*/i.test(content)) {
+      violencePatterns.push(/\bkill\w*/i);
+    }
 
     if (violencePatterns.some(pattern => pattern.test(content))) {
       flags.push('violence_threat');
@@ -454,6 +519,11 @@ export class BasicSecurityAgent {
       return true;
     }
 
+    // CRITICAL: Always escalate crisis situations
+    if (flags.includes('critical_crisis')) {
+      return true;
+    }
+
     // Escalate for mental health concerns
     if (flags.includes('suicide_risk') || flags.includes('self_harm_risk') || flags.includes('depression_crisis')) {
       return true;
@@ -463,6 +533,8 @@ export class BasicSecurityAgent {
     if (flags.includes('malicious_intent') || flags.includes('violence_threat')) {
       return true;
     }
+
+    // Note: emotional_distress is handled but NOT escalated - it gets supportive response
 
     // Escalate for complex compliance scenarios
     const complexTopics = [

@@ -98,7 +98,10 @@ function generateBusinessInsight(): string {
 }
 
 // Main booking agent function with smart response generation
-export async function generateBookingResponse(query: string): Promise<string> {
+export async function generateBookingResponse(query: string, options?: {
+  isEmotionalDistress?: boolean;
+  isCrisis?: boolean;
+}): Promise<string> {
   const context = detectBookingContext(query);
   const contextLabels = {
     visa: 'Immigration/Visa Consultation',
@@ -110,29 +113,57 @@ export async function generateBookingResponse(query: string): Promise<string> {
 
   const contextLabel = contextLabels[context.type as keyof typeof contextLabels] || 'General Consultation';
   
+  // Detect emotional state and adjust meeting type accordingly
+  let meetingType = contextLabel;
+  let suggestedDuration = context.suggestedDuration;
+  
+  if (options?.isEmotionalDistress) {
+    meetingType = '15-minute check-in call';
+    suggestedDuration = '15min';
+  } else if (options?.isCrisis) {
+    // Crisis situations should not proceed with normal booking
+    return `I'm concerned about what you've shared and want to make sure you're safe. Please reach out to someone right now - a trusted friend, family member, or crisis hotline. If you're in immediate danger, please call emergency services or Lifeline at 13 11 14. Your safety is the most important thing right now.`;
+  }
+  
   // Generate pre-filled Calendly URL with context
   const encodedContext = encodeURIComponent(`Topic: ${contextLabel}\nQuery: ${query}\nAI Confidence: ${context.confidence}%`);
   const calendlyWithContext = `${CALENDLY_URL}?a1=${encodedContext}`;
 
-  return `Hey! I totally get what you're going through with ${contextLabel.toLowerCase()}. Let me help you set up a chat with Kevin who can give you the personalized guidance you need.
+  // Determine appropriate introduction based on emotional state
+  let introduction: string;
+  if (options?.isEmotionalDistress) {
+    introduction = `I understand you're feeling overwhelmed right now, and that's completely normal when considering career changes. Let me help you set up a gentle conversation with our student success coordinator.`;
+  } else {
+    introduction = `I understand you're interested in learning more about our cybersecurity program. Let me help you get connected with our student success coordinator who can provide personalized guidance.`;
+  }
+
+  // Meeting preparation template as per protocol
+  const preparationTemplate = `
+**Your Situation**: ${query}
+**Meeting Type**: ${meetingType} (${suggestedDuration})
+**What We'll Cover**:
+- Program overview and requirements assessment
+- Career pathway discussion  
+- Student background review
+- Next steps planning
+- Resource recommendations based on your specific needs`;
+
+  return `${introduction}
 
 📅 **[Book Your Meeting Here](${calendlyWithContext})**
 
-Here's what I've already prepared for your conversation:
-• **Your situation**: ${query}
-• **Meeting type**: ${contextLabel} (${context.suggestedDuration})
-• **What we'll cover**:
-${context.preparationNotes.map(note => `  ✓ ${note}`).join('\n')}
-
-${context.businessInsight}
+Here's what our student success coordinator has prepared for your consultation:
+${preparationTemplate}
 
 **What happens next:**
 1. Choose a time that works for you
-2. You'll get calendar details automatically
-3. Kevin will review everything beforehand so you don't have to repeat yourself
-4. Get real answers for your specific situation
+2. You'll get calendar details automatically  
+3. Our academic advisor will review everything beforehand so you don't have to repeat yourself
+4. Get personalized answers for your specific situation
 
-Is there anything else about your situation you'd like me to make sure Kevin knows about before your meeting?`;
+During this consultation, our academic advisor will help you understand program requirements, career paths, and determine if this direction aligns with your goals.
+
+Is there anything else about your situation you'd like me to make sure our team knows about before your meeting?`;
 }
 
 // Export analytics for dashboard/reporting

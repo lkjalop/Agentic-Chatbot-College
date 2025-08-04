@@ -11,8 +11,10 @@ import { PersonaAwareRouter } from '@/lib/personas/persona-router';
 import { batchUpsertVectors, VectorMetadata } from '@/lib/vector';
 import { cache, createCacheKey, hashObject } from '@/lib/utils/cache';
 import { BasicSecurityAgent } from '@/lib/security/basic-security-agent';
+import { ResponseValidator } from '@/lib/security/response-validator';
 
 const security = new BasicSecurityAgent();
+const responseValidator = new ResponseValidator();
 
 export async function POST(request: NextRequest) {
   try {
@@ -282,6 +284,17 @@ export async function POST(request: NextRequest) {
       response = getAgentSpecificFallbackResponse(query, selectedAgent);
     }
     
+    // RESPONSE VALIDATION - Apply safety protocol
+    const validationResult = responseValidator.validateResponse(response, {
+      originalQuery: query,
+      userSession: session,
+      conversationHistory: [],
+      securityFlags: securityResult.flags
+    });
+
+    // Use the sanitized response
+    const finalResponse = validationResult.sanitizedResponse;
+
     // Generate diagnostic information for the UI
     const diagnostics = {
       agent: selectedAgent,
@@ -298,19 +311,25 @@ export async function POST(request: NextRequest) {
         .map((r: any) => r.metadata?.title || r.title || 'Knowledge Base')
         .filter(Boolean),
       reasoning: generateReasoning(intent.type, selectedAgent, query),
+      validation: {
+        isValid: validationResult.isValid,
+        violations: validationResult.violations,
+        responseType: validationResult.responseType,
+        humanEscalation: validationResult.requiresHumanEscalation
+      },
       security: {
         scanPerformed: true,
-        threatLevel: 'safe',
-        flags: [],
+        threatLevel: securityResult.allowed ? 'safe' : 'blocked',
+        flags: securityResult.flags,
         scanTime: new Date().toISOString(),
-        piiDetection: 'clear',
-        threatScan: 'passed',
-        contentFilter: 'safe'
+        piiDetection: securityResult.flags.some(f => f.includes('pii')) ? 'detected' : 'clear',
+        threatScan: securityResult.flags.some(f => f.includes('threat')) ? 'flagged' : 'passed',
+        contentFilter: validationResult.responseType === 'crisis' ? 'crisis_handled' : 'safe'
       }
     };
 
     return Response.json({
-      response,
+      response: finalResponse,
       agent: selectedAgent,
       intent,
       results: finalResults.results || searchResults.results,
@@ -778,7 +797,7 @@ function getAgentSpecificFallbackResponse(query: string, agent: string): string 
 
     knowledge: `Career paths in Australia can be confusing, but you're in the right place! Are you thinking ${courseRecommendation}? All our 4-week bootcamps are $740 AUD with payment plans available.`,
 
-    booking: `Perfect! Let me help you get connected with Kevin for some personalized guidance. I'll make sure he has all the context about your situation before you chat.`
+    booking: `Perfect! Let me help you get connected with our student success coordinator for some personalized guidance. I'll make sure they have all the context about your situation before you chat.`
   };
 
   return responses[agent as keyof typeof responses] || responses.knowledge;
