@@ -118,15 +118,43 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
     
     // Add the actual agent that was used
     const agentIcons = {
+      // Legacy agents (for rollback)
       knowledge: '📚',
-      cultural: '🌍', 
       schedule: '📅',
-      voice: '🎙️'
+      voice: '🎙️',
+      
+      // Option 7: Career Track Specialists + Essential Support
+      data_ai: '📊',
+      cybersecurity: '🔒',
+      business_analyst: '💼',
+      fullstack: '🌐',
+      
+      // Essential Support Agents
+      cultural: '🌍',
+      booking: '📅'
+    };
+    
+    // Agent display names
+    const agentDisplayNames = {
+      // Legacy agents
+      knowledge: 'Knowledge Agent',
+      schedule: 'Schedule Agent', 
+      voice: 'Voice Agent',
+      
+      // Option 7: Career Track Specialists
+      data_ai: 'Data & AI Specialist',
+      cybersecurity: 'Cybersecurity Expert',
+      business_analyst: 'Business Analyst Guide',
+      fullstack: 'Full Stack Mentor',
+      
+      // Essential Support
+      cultural: 'International Support',
+      booking: 'Scheduling Assistant'
     };
     
     agents.push({
       id: 'active',
-      name: `${diagnostics.agent.charAt(0).toUpperCase() + diagnostics.agent.slice(1)} Agent`,
+      name: agentDisplayNames[diagnostics.agent as keyof typeof agentDisplayNames] || `${diagnostics.agent.charAt(0).toUpperCase() + diagnostics.agent.slice(1)} Agent`,
       icon: agentIcons[diagnostics.agent as keyof typeof agentIcons] || '🤖',
       confidence: diagnostics.confidence,
       type: 'agent'

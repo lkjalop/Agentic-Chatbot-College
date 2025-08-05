@@ -255,10 +255,78 @@ export class AgenticRouter {
   }
 }
 
-export async function routeToAgent(query: string, intent: Intent): Promise<string> {
+/**
+ * Option 7: Smart Career Track + Essential Support Agent Router
+ * 4 Career Tracks + 2 Essential Support Agents = 6 Total
+ * Eliminates voice agent, keeps booking (sophisticated) + cultural (visa critical)
+ */
+
+// Feature flags for rollback capability
+const FEATURE_FLAGS = {
+  USE_CAREER_TRACKS: process.env.FEATURE_CAREER_TRACKS !== 'false', // Default enabled
+  ROLLBACK_TO_ORIGINAL: process.env.ROLLBACK_TO_ORIGINAL === 'true',
+  CAREER_TRACK_ROLLOUT: parseInt(process.env.CAREER_TRACK_ROLLOUT || '100'), // 0-100%
+};
+
+// Legacy agent mapping for rollback
+const LEGACY_AGENT_MAPPING = {
+  'data_ai': 'knowledge',
+  'cybersecurity': 'knowledge', 
+  'business_analyst': 'knowledge',
+  'fullstack': 'knowledge',
+  'booking': 'booking',
+  'cultural': 'cultural'
+};
+
+/**
+ * Route to career track based on query content and intent
+ */
+function routeToCareerTrack(query: string, intent: Intent): string {
+  const q = query.toLowerCase();
+  
+  // Data & AI Track - data science, analytics, ML, AI
+  if (q.includes('data') || q.includes('analytics') || q.includes('python') || 
+      q.includes('machine learning') || q.includes('ai') || q.includes('sql') ||
+      q.includes('statistics') || q.includes('data science') || q.includes('visualization') ||
+      intent.entities.some(e => ['data', 'analytics', 'python', 'ml'].includes(e.toLowerCase()))) {
+    return 'data_ai';
+  }
+  
+  // Cybersecurity Track - security, ethical hacking, compliance
+  if (q.includes('security') || q.includes('cyber') || q.includes('ethical') ||
+      q.includes('penetration') || q.includes('compliance') || q.includes('hacking') ||
+      q.includes('firewall') || q.includes('encryption') || q.includes('audit') ||
+      intent.entities.some(e => ['security', 'cyber', 'compliance'].includes(e.toLowerCase()))) {
+    return 'cybersecurity';
+  }
+  
+  // Full Stack Track - web development, frontend, backend
+  if (q.includes('full stack') || q.includes('fullstack') || q.includes('web') ||
+      q.includes('frontend') || q.includes('backend') || q.includes('react') ||
+      q.includes('javascript') || q.includes('node') || q.includes('html') || q.includes('css') ||
+      intent.entities.some(e => ['web', 'react', 'javascript', 'frontend'].includes(e.toLowerCase()))) {
+    return 'fullstack';
+  }
+  
+  // Business Analyst Track - requirements, stakeholders, process improvement
+  if (q.includes('business analyst') || q.includes('requirements') || 
+      q.includes('stakeholder') || q.includes('process') || q.includes('workflow') ||
+      q.includes('documentation') || q.includes('analysis') || q.includes('specification') ||
+      intent.entities.some(e => ['business', 'requirements', 'analysis'].includes(e.toLowerCase()))) {
+    return 'business_analyst';
+  }
+  
+  // Default to Business Analyst (most general track)
+  return 'business_analyst';
+}
+
+/**
+ * Legacy routing function for rollback
+ */
+function routeToOriginalAgents(query: string, intent: Intent): string {
   const lowercaseQuery = query.toLowerCase();
   
-  // Booking agent for appointment/advisor queries - MUST come before schedule
+  // Booking agent logic (preserved)
   if (lowercaseQuery.includes('book') || 
       lowercaseQuery.includes('appointment with') ||
       lowercaseQuery.includes('meet with') ||
@@ -277,17 +345,7 @@ export async function routeToAgent(query: string, intent: Intent): Promise<strin
     return 'booking';
   }
   
-  // Schedule agent for time/interview related queries
-  if (lowercaseQuery.includes('interview') || 
-      lowercaseQuery.includes('schedule') || 
-      lowercaseQuery.includes('appointment') ||
-      lowercaseQuery.includes('timeline') ||
-      lowercaseQuery.includes('when') ||
-      lowercaseQuery.includes('time')) {
-    return 'schedule';
-  }
-  
-  // Cultural agent for international/cultural queries
+  // Cultural agent logic (preserved)
   if (lowercaseQuery.includes('international') ||
       lowercaseQuery.includes('cultural') ||
       lowercaseQuery.includes('visa') ||
@@ -297,7 +355,7 @@ export async function routeToAgent(query: string, intent: Intent): Promise<strin
     return 'cultural';
   }
   
-  // Voice agent for communication/presentation queries
+  // Voice agent logic (now handled by career tracks with communication context)
   if (lowercaseQuery.includes('presentation') ||
       lowercaseQuery.includes('speaking') ||
       lowercaseQuery.includes('communication') ||
@@ -307,6 +365,98 @@ export async function routeToAgent(query: string, intent: Intent): Promise<strin
     return 'voice';
   }
   
-  // Default to knowledge agent for general career queries
+  // Default to knowledge
   return 'knowledge';
+}
+
+/**
+ * Gradual rollout helper - determines if user gets new system
+ */
+function shouldUseNewSystem(sessionId: string = 'anonymous'): boolean {
+  if (FEATURE_FLAGS.ROLLBACK_TO_ORIGINAL) return false;
+  if (!FEATURE_FLAGS.USE_CAREER_TRACKS) return false;
+  
+  const rolloutPercentage = FEATURE_FLAGS.CAREER_TRACK_ROLLOUT;
+  if (rolloutPercentage >= 100) return true;
+  if (rolloutPercentage <= 0) return false;
+  
+  // Consistent hash-based rollout
+  const hash = sessionId.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+  return Math.abs(hash) % 100 < rolloutPercentage;
+}
+
+export async function routeToAgent(query: string, intent: Intent, sessionId?: string): Promise<string> {
+  // Check if we should use the new system
+  if (!shouldUseNewSystem(sessionId)) {
+    console.log('🔄 Using legacy agent routing (rollback/gradual rollout)');
+    return routeToOriginalAgents(query, intent);
+  }
+  
+  console.log('🎯 Using Option 7: Smart Career Track + Essential Support routing');
+  const lowercaseQuery = query.toLowerCase();
+  
+  // Essential Support Agents (30% of traffic)
+  // Booking agent - preserve sophisticated booking functionality
+  if (intent.type === 'booking' || 
+      lowercaseQuery.includes('book') || 
+      lowercaseQuery.includes('appointment') ||
+      lowercaseQuery.includes('meet with') ||
+      lowercaseQuery.includes('advisor') ||
+      lowercaseQuery.includes('consultation') ||
+      lowercaseQuery.includes('schedule a meeting')) {
+    return 'booking';
+  }
+  
+  // Cultural agent - critical for visa/international support
+  if (intent.type === 'cultural' || intent.type === 'visa_support' ||
+      lowercaseQuery.includes('visa') ||
+      lowercaseQuery.includes('international') ||
+      lowercaseQuery.includes('cultural') ||
+      lowercaseQuery.includes('immigration') ||
+      lowercaseQuery.includes('work authorization') ||
+      lowercaseQuery.includes('opt') || lowercaseQuery.includes('cpt')) {
+    return 'cultural';
+  }
+  
+  // Career Track Routing (70% of traffic)
+  // Route career guidance queries to specialized tracks
+  if (intent.type === 'career_path' || intent.type === 'course_comparison' ||
+      intent.type === 'prerequisite' || intent.type === 'recommendation' ||
+      intent.type === 'career_guidance' || intent.category === 'educational') {
+    return routeToCareerTrack(query, intent);
+  }
+  
+  // Handle communication/voice queries through career tracks with context
+  if (lowercaseQuery.includes('presentation') ||
+      lowercaseQuery.includes('speaking') ||
+      lowercaseQuery.includes('communication') ||
+      lowercaseQuery.includes('interview skills')) {
+    // Route to most relevant career track but with communication context
+    const track = routeToCareerTrack(query, intent);
+    console.log(`🎤 Communication query routed to ${track} with voice context`);
+    return track;
+  }
+  
+  // Default to career track routing for general queries
+  return routeToCareerTrack(query, intent);
+}
+
+/**
+ * Get agent mapping for monitoring/rollback
+ */
+export function getAgentMapping(newAgent: string): { new: string; legacy: string } {
+  return {
+    new: newAgent,
+    legacy: LEGACY_AGENT_MAPPING[newAgent as keyof typeof LEGACY_AGENT_MAPPING] || 'knowledge'
+  };
+}
+
+/**
+ * Get feature flag status for monitoring
+ */
+export function getFeatureFlags() {
+  return FEATURE_FLAGS;
 }

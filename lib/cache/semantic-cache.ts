@@ -121,7 +121,7 @@ export class SemanticCache {
       {
         query: "cybersecurity career path prerequisites",
         response: "Cybersecurity offers excellent career prospects! Our 4-week Cybersecurity Bootcamp ($740 AUD) covers AWS Security, Azure Security, IAM management, and compliance frameworks. No advanced IT background required - just willingness to learn. The field has high demand with roles like Cloud Security Specialist and Cybersecurity Analyst. Would you like to book a consultation to discuss your background and goals?",
-        agent: "knowledge",
+        agent: "cybersecurity",
         results: [
           {
             id: "cybersecurity-bootcamp-warm",
@@ -145,7 +145,7 @@ export class SemanticCache {
       {
         query: "data analyst vs business analyst comparison",
         response: "Great question! Data Analyst focuses on Python, SQL, and data visualization ($740 AUD, 4 weeks) - perfect if you enjoy working with numbers and creating insights. Business Analyst is more about requirements gathering, stakeholder management, and process improvement ($740 AUD, 4 weeks) - ideal if you prefer working with people and solving business problems. Both have excellent career prospects. Which appeals more to your interests?",
-        agent: "knowledge", 
+        agent: "business_analyst", 
         results: [
           {
             id: "analyst-comparison-warm",
@@ -157,12 +157,36 @@ export class SemanticCache {
       {
         query: "full stack developer job market trends",
         response: "Full stack development has strong job market demand! Current trends show high demand for React/Next.js and Node.js skills (covered in our bootcamp). Junior developers start around $60-80K AUD, with growth to $100K+ with experience. The market particularly values developers who can work across frontend and backend. Our 4-week program ($740 AUD) covers modern frameworks and includes portfolio building. Ready to explore this path?",
-        agent: "knowledge",
+        agent: "fullstack",
         results: [
           {
             id: "fullstack-market-warm", 
             content: "Full Stack Developer market: High demand for React/Next.js, salary range $60-100K+ AUD, strong career growth prospects.",
             metadata: { title: "Full Stack Market", category: "career", enhanced: true, cragProcessed: true }
+          }
+        ]
+      },
+      {
+        query: "data science python career path",
+        response: "Data science with Python is an excellent career choice! Our 4-week Data & AI Bootcamp ($740 AUD) covers Python programming, SQL databases, machine learning fundamentals, and data visualization. You'll learn pandas, scikit-learn, and matplotlib - essential tools for data scientists. Entry-level positions start around $70-90K AUD. The field is growing rapidly with opportunities in healthcare, finance, and tech. Ready to dive into data?",
+        agent: "data_ai",
+        results: [
+          {
+            id: "data-science-warm",
+            content: "Data & AI Bootcamp: Python, SQL, machine learning, visualization. Career opportunities in multiple industries.",
+            metadata: { title: "Data Science Path", category: "career", enhanced: true, cragProcessed: true }
+          }
+        ]
+      },
+      {
+        query: "business analyst requirements gathering",
+        response: "Requirements gathering is a core BA skill! Our Business Analyst Bootcamp ($740 AUD, 4 weeks) teaches you stakeholder interviews, documentation techniques, process mapping, and analysis tools. You'll practice with real scenarios and learn to translate business needs into technical specifications. BAs are in high demand across industries - from $65-85K AUD starting salary. Want to explore this people-focused career path?",
+        agent: "business_analyst",
+        results: [
+          {
+            id: "ba-requirements-warm",
+            content: "Business Analyst skills: Requirements gathering, stakeholder management, process analysis, documentation.",
+            metadata: { title: "BA Requirements", category: "career", enhanced: true, cragProcessed: true }
           }
         ]
       }

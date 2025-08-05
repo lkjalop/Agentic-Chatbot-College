@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
         console.log(`Using cached intent: ${intent.type}, Agent: ${selectedAgent}`);
       } else {
         intent = await analyzeIntent(query);
-        selectedAgent = agent || await routeToAgent(query, intent);
+        selectedAgent = agent || await routeToAgent(query, intent, session?.user?.id);
         
         // Cache the result for 10 minutes
         cache.set(cacheKey, { intent, selectedAgent }, 600000);
@@ -443,10 +443,23 @@ async function generateAgentResponse(
   }
   
   const agentPrompts = {
+    // Legacy agents (preserved for rollback)
     knowledge: `You're a friendly career advisor helping ${userGreeting === 'there' ? 'a student' : userGreeting}. For "${query}", give practical advice in 1-2 conversational sentences. ${userGreeting === 'there' ? 'You can ask for their name to personalize the conversation better. ' : ''}Sound human and relatable, then ask what they'd like to explore next.`,
     schedule: `You're helping ${userGreeting === 'there' ? 'someone' : userGreeting} with timing and planning. For "${query}", give friendly scheduling advice in 1-2 sentences like you're talking to a friend. ${userGreeting === 'there' ? 'Feel free to ask for their name to make the conversation more personal. ' : ''}Ask what specific timeline they're working with.`,
-    cultural: `You understand the international student experience and you're helping ${userGreeting === 'there' ? 'a student' : userGreeting}. For "${query}", give warm, culturally-aware advice in 1-2 sentences. ${userGreeting === 'there' ? 'You can ask for their name to better assist them. ' : ''}Ask what specific cultural challenges they're facing.`,
     voice: `You're a communication coach helping ${userGreeting === 'there' ? 'someone' : userGreeting}. For "${query}", give encouraging speaking advice in 1-2 sentences. ${userGreeting === 'there' ? 'You might want to ask for their name to personalize your guidance. ' : ''}Ask what communication situation they're preparing for.`,
+    
+    // Option 7: Career Track Specialists + Essential Support
+    data_ai: `You're a Data & AI track specialist helping ${userGreeting === 'there' ? 'a student' : userGreeting}. Focus on data science, machine learning, Python, SQL, statistics, and AI careers. For "${query}", provide practical insights about data analysis skills, tools, and career paths in 1-2 conversational sentences. ${userGreeting === 'there' ? 'Feel free to ask their name for better personalization. ' : ''}Always mention our 4-week Data & AI Bootcamp ($740 AUD) when relevant.`,
+    
+    cybersecurity: `You're a Cybersecurity track specialist helping ${userGreeting === 'there' ? 'a student' : userGreeting}. Focus on security fundamentals, ethical hacking, compliance, AWS/Azure security, and cybersecurity careers. For "${query}", give expert security guidance in 1-2 conversational sentences. ${userGreeting === 'there' ? 'You can ask for their name to personalize advice. ' : ''}Always mention our 4-week Cybersecurity Bootcamp ($740 AUD) when relevant.`,
+    
+    business_analyst: `You're a Business Analyst track specialist helping ${userGreeting === 'there' ? 'a student' : userGreeting}. Focus on requirements gathering, stakeholder management, process improvement, and BA careers. For "${query}", provide practical business analysis insights in 1-2 conversational sentences. ${userGreeting === 'there' ? 'Feel free to ask their name for better guidance. ' : ''}Always mention our 4-week Business Analyst Bootcamp ($740 AUD) when relevant. ${query.toLowerCase().includes('communication') || query.toLowerCase().includes('presentation') ? 'Note: This query has communication aspects - provide guidance on professional communication skills within the BA context.' : ''}`,
+    
+    fullstack: `You're a Full Stack Development specialist helping ${userGreeting === 'there' ? 'a student' : userGreeting}. Focus on web development, React, Node.js, HTML/CSS, JavaScript, and full stack careers. For "${query}", give practical development insights in 1-2 conversational sentences. ${userGreeting === 'there' ? 'You can ask for their name to personalize guidance. ' : ''}Always mention our 4-week Full Stack Bootcamp ($740 AUD) when relevant. ${query.toLowerCase().includes('communication') || query.toLowerCase().includes('presentation') ? 'Note: This query has communication aspects - provide guidance on technical communication and presentation skills for developers.' : ''}`,
+    
+    // Essential Support Agents (preserved)
+    cultural: `You understand the international student experience and you're helping ${userGreeting === 'there' ? 'a student' : userGreeting}. For "${query}", give warm, culturally-aware advice in 1-2 sentences. Focus on visa considerations, work authorization, and cultural adaptation. ${userGreeting === 'there' ? 'You can ask for their name to better assist them. ' : ''}Ask what specific visa or cultural challenges they're facing.`,
+    
     booking: `You help connect people with advisors. You're assisting ${userGreeting === 'there' ? 'someone' : userGreeting}. For "${query}", provide smart booking assistance with context analysis using conversational, helpful language.`
   };
 
@@ -788,60 +801,36 @@ Prerequisites: Most programs designed for beginners with basic understanding, no
 }
 
 function getSimpleAgentRouting(query: string): string {
-  const lowercaseQuery = query.toLowerCase();
+  // Use the same routing logic as the main router for consistency
+  const mockIntent = { type: 'recommendation' as const, confidence: 0.7, entities: [], searchStrategy: 'semantic' as const, clarificationNeeded: false };
   
-  // Booking agent for appointment/advisor queries - MUST come first
-  if (lowercaseQuery.includes('book') || 
-      lowercaseQuery.includes('appointment with') ||
-      lowercaseQuery.includes('meet with') ||
-      lowercaseQuery.includes('advisor') ||
-      lowercaseQuery.includes('consultation') ||
-      lowercaseQuery.includes('schedule a meeting') ||
-      lowercaseQuery.includes('opt application') ||
-      lowercaseQuery.includes('opt') ||
-      lowercaseQuery.includes('visa help') ||
-      lowercaseQuery.includes('need help with') ||
-      lowercaseQuery.includes('i need help with') ||
-      lowercaseQuery.includes('help with my') ||
-      lowercaseQuery.includes('application') ||
-      lowercaseQuery.includes('visa application') ||
-      lowercaseQuery.includes('immigration help')) {
-    return 'booking';
+  // Import the router functions (they're synchronous routing functions)
+  const { routeToAgent, getFeatureFlags } = require('@/lib/ai/router');
+  const flags = getFeatureFlags();
+  
+  if (flags.ROLLBACK_TO_ORIGINAL) {
+    // Use legacy routing
+    const lowercaseQuery = query.toLowerCase();
+    
+    if (lowercaseQuery.includes('book') || lowercaseQuery.includes('appointment')) return 'booking';
+    if (lowercaseQuery.includes('visa') || lowercaseQuery.includes('international')) return 'cultural';
+    if (lowercaseQuery.includes('voice') || lowercaseQuery.includes('communication')) return 'voice';
+    return 'knowledge';
+  } else {
+    // Use new Option 7 routing - simplified version for fallback
+    const lowercaseQuery = query.toLowerCase();
+    
+    // Essential Support
+    if (lowercaseQuery.includes('book') || lowercaseQuery.includes('appointment')) return 'booking';
+    if (lowercaseQuery.includes('visa') || lowercaseQuery.includes('international')) return 'cultural';
+    
+    // Career Tracks
+    if (lowercaseQuery.includes('data') || lowercaseQuery.includes('analytics')) return 'data_ai';
+    if (lowercaseQuery.includes('security') || lowercaseQuery.includes('cyber')) return 'cybersecurity';
+    if (lowercaseQuery.includes('web') || lowercaseQuery.includes('fullstack')) return 'fullstack';
+    
+    return 'business_analyst'; // Default career track
   }
-  
-  // Schedule agent for time/interview related queries
-  if (lowercaseQuery.includes('interview') || 
-      lowercaseQuery.includes('schedule') || 
-      lowercaseQuery.includes('appointment') ||
-      lowercaseQuery.includes('call') ||
-      lowercaseQuery.includes('timeline') ||
-      lowercaseQuery.includes('when') ||
-      lowercaseQuery.includes('time')) {
-    return 'schedule';
-  }
-  
-  // Cultural agent for international/visa queries
-  if (lowercaseQuery.includes('international') ||
-      lowercaseQuery.includes('cultural') ||
-      lowercaseQuery.includes('visa') ||
-      lowercaseQuery.includes('culture') ||
-      lowercaseQuery.includes('abroad') ||
-      lowercaseQuery.includes('foreign')) {
-    return 'cultural';
-  }
-  
-  // Voice agent for communication/presentation queries
-  if (lowercaseQuery.includes('presentation') ||
-      lowercaseQuery.includes('speaking') ||
-      lowercaseQuery.includes('communication') ||
-      lowercaseQuery.includes('voice') ||
-      lowercaseQuery.includes('verbal') ||
-      lowercaseQuery.includes('interview skills')) {
-    return 'voice';
-  }
-  
-  // Default to knowledge agent for general career queries
-  return 'knowledge';
 }
 
 function getAgentSpecificFallbackResponse(query: string, agent: string): string {

@@ -34,6 +34,13 @@ DEEPGRAM_API_KEY=<your-deepgram-key>
 ELEVENLABS_API_KEY=<your-elevenlabs-key>
 ```
 
+### **Option 7 Agent System (Required)**
+```
+FEATURE_CAREER_TRACKS=true
+ROLLBACK_TO_ORIGINAL=false
+CAREER_TRACK_ROLLOUT=100
+```
+
 ## How to Add Variables
 
 1. Go to Vercel Dashboard → Your Project → Settings → Environment Variables
