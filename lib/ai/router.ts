@@ -411,13 +411,26 @@ export async function routeToAgent(query: string, intent: Intent, sessionId?: st
   }
   
   // Cultural agent - critical for visa/international support
-  if (intent.type === 'cultural' || intent.type === 'visa_support' ||
+  // IMPORTANT: Only route to cultural if it's actually about visa/cultural issues
+  if ((intent.type === 'cultural' || intent.type === 'visa_support') ||
       lowercaseQuery.includes('visa') ||
       lowercaseQuery.includes('international') ||
       lowercaseQuery.includes('cultural') ||
       lowercaseQuery.includes('immigration') ||
       lowercaseQuery.includes('work authorization') ||
       lowercaseQuery.includes('opt') || lowercaseQuery.includes('cpt')) {
+    // BUT: Don't route career track queries to cultural just because intent says so
+    // Check if this is actually a career track query that got misclassified
+    if (lowercaseQuery.includes('business analyst') || 
+        lowercaseQuery.includes('data') && (lowercaseQuery.includes('analyst') || lowercaseQuery.includes('science')) ||
+        lowercaseQuery.includes('cybersecurity') || lowercaseQuery.includes('security') ||
+        lowercaseQuery.includes('full stack') || lowercaseQuery.includes('developer') ||
+        lowercaseQuery.includes('program options') || lowercaseQuery.includes('course options') ||
+        lowercaseQuery.includes('bootcamp') || lowercaseQuery.includes('training')) {
+      // This is actually a career track query, route to career tracks instead
+      console.log(`🔄 Override: "${query}" misclassified as cultural, routing to career track`);
+      return routeToCareerTrack(query, intent);
+    }
     return 'cultural';
   }
   

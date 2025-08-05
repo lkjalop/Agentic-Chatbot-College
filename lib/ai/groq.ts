@@ -196,9 +196,20 @@ AVOID:
     });
 
     const response = completion.choices[0]?.message?.content;
+    console.log(`🤖 Groq raw response length: ${response?.length || 0}`);
+    console.log(`🤖 Groq response preview: "${response?.substring(0, 100) || 'null'}"`);
+    
     if (!response || response.trim().length < 10) {
+      console.log('❌ Groq response too short or empty, throwing error to trigger fallback');
       throw new Error('Empty or too short response from Groq API');
     }
+    
+    // Check for generic fallback responses that shouldn't be used
+    if (response.includes('I understand what you\'re going through')) {
+      console.log('❌ Groq returned generic fallback message, throwing error to trigger proper fallback');
+      throw new Error('Groq returned generic fallback instead of proper response');
+    }
+    
     return response;
   } catch (error) {
     console.error('Response generation error:', error);
