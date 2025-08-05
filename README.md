@@ -44,7 +44,7 @@ Built an intelligent bootcamp advisor that routes students to the right track fr
 
 ## 🏗️ Technical Architecture & Design Decisions
 
-### Current System Architecture (Multi-Track Bootcamp Recruitment)
+### Option 7 Architecture: Smart Career Track + Essential Support (6 Agents)
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                     VOICE & CHAT INTERFACE                         │
@@ -53,52 +53,58 @@ Built an intelligent bootcamp advisor that routes students to the right track fr
 └────────────────────────┬────────────────────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────────────────────┐
-│                   SECURITY LAYER                                    │
-│  🛡️ PII Detection • Threat Scanning • Rate Limiting • Audit Log   │
+│               SECURITY & CRAG CLASSIFICATION                       │
+│  🛡️ PII Detection • Threat Scanning • Crisis Detection            │
+│  🧠 CRAG: Enhanced path (~800ms) vs Fast path (~200ms)             │
+│  📊 100% Crisis Detection • Semantic Caching • Rate Limiting       │
 └────────────────────────┬────────────────────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────────────────────┐
-│              MULTI-TRACK ROUTING SYSTEM                             │
-│  🎯 Track Detection → Persona Matching → Bootcamp Advisor Response  │
-│       (83.3% Track Recognition Success Rate)                        │
-└─────┬──────┬──────┬──────┬──────┬─────────────────────────────────────┘
-      │      │      │      │      │
-      ▼      ▼      ▼      ▼      ▼
-┌─────────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌─────────┐
-│Business │ │Data  │ │Cyber │ │Full  │ │Booking  │
-│Analyst  │ │& AI  │ │Sec   │ │Stack │ │ Agent   │
-│Track    │ │Track │ │Track │ │Track │ │         │
-│$740 AUD │ │$740  │ │$740  │ │$740  │ │Consult  │
-│No Code  │ │Python│ │AWS   │ │Dev   │ │Schedule │
-└─────────┘ └──────┘ └──────┘ └──────┘ └─────────┘
-      │      │      │      │      │
-      └──────┼──────┼──────┼──────┘
-             │      │      │
-┌────────────▼──────▼──────▼──────────────────────────────────────────┐
-│               STRATEGIC Q&A KNOWLEDGE BASE                          │
-│  📊 110 Q&As (80 Bootcamp + 30 Strategic) • Persona Matching       │
-│  🎯 Track-Specific Guidance • Success Stories • Pricing Details     │
-│  👥 International Students • Career Changers • Local Students       │
+│        OPTION 7: CAREER TRACK + ESSENTIAL SUPPORT ROUTING          │
+│  🎯 Track Detection → Agent Selection → Feature Flag Check         │
+│  🔄 Instant Rollback: ROLLBACK_TO_ORIGINAL=true → Legacy System    │
+│  📊 Track Recognition: 83.3% • Gradual Rollout: 0-100%            │
+└─┬──────┬──────┬──────┬──────┬──────┬───────────────────────────────┘
+  │      │      │      │      │      │
+  ▼      ▼      ▼      ▼      ▼      ▼
+┌────┐ ┌────┐ ┌────┐ ┌────┐ ┌────┐ ┌────┐
+│📊  │ │🔒  │ │💼  │ │🌐  │ │🌍  │ │📅  │
+│Data│ │Cyber│ │Bus │ │Full│ │Cult│ │Book│
+│& AI│ │Sec │ │Anal│ │Stck│ │ural│ │ing │
+│$740│ │$740│ │$740│ │$740│ │Visa│ │Cons│
+│4wk │ │4wk │ │4wk │ │4wk │ │485 │ │ult │
+└────┘ └────┘ └────┘ └────┘ └────┘ └────┘
+  │      │      │      │      │      │
+  └──────┼──────┼──────┼──────┼──────┘
+         │      │      │      │
+┌────────▼──────▼──────▼──────▼──────────────────────────────────────┐
+│           ENHANCED KNOWLEDGE BASE + ROLLBACK SYSTEM               │
+│  📊 110 Q&As with Track-Specific Knowledge • Success Stories      │
+│  🔄 Feature Flags: USE_CAREER_TRACKS, CAREER_TRACK_ROLLOUT        │
+│  📈 A/B Testing: Percentage-based rollout with instant rollback   │
+│  🎯 Legacy Fallback: knowledge, cultural, voice, booking agents   │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### 🎯 Multi-Track Bootcamp Specialization (Current Implementation)
+### Option 7: 6-Agent Hybrid Architecture (4 Career Tracks + 2 Essential Support)
 ```
-┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│  BUSINESS   │ │  DATA & AI  │ │ CYBERSECURITY│ │ FULL STACK  │ │   BOOKING   │
-│  ANALYST    │ │  ANALYST    │ │    TRACK    │ │ DEVELOPER   │ │   AGENT     │
-│   TRACK     │ │   TRACK     │ │             │ │   TRACK     │ │             │
-│✅ Agile     │ │✅ Python    │ │✅ AWS Sec   │ │✅ Frontend  │ │✅ Consult   │
-│✅ No Code   │ │✅ SQL       │ │✅ DevSecOps │ │✅ Backend   │ │  Booking    │
-│✅ BA Tools  │ │✅ AI Tools  │ │✅ Privacy   │ │✅ Full Apps │ │✅ Advisor   │
-│✅ Stakeholder│ │✅ Dashboard │ │✅ Audit     │ │✅ Portfolio │ │  Matching   │
-│✅ $740 AUD  │ │✅ $740 AUD  │ │✅ $740 AUD  │ │✅ $740 AUD  │ │✅ Schedule  │
-│✅ 4 weeks   │ │✅ 4 weeks   │ │✅ 4 weeks   │ │✅ 4 weeks   │ │  Setup     │
-└─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│  📊 DATA &  │ │ 🔒 CYBER   │ │ 💼 BUSINESS │ │ 🌐 FULL    │ │ 🌍 CULTURAL │ │ 📅 BOOKING  │
+│    AI       │ │ SECURITY   │ │  ANALYST    │ │  STACK     │ │   SUPPORT   │ │   SUPPORT   │
+│  TRACK      │ │   TRACK    │ │   TRACK     │ │  TRACK     │ │             │ │             │
+│✅ Python    │ │✅ AWS Sec  │ │✅ Agile     │ │✅ React    │ │✅ 485 Visa  │ │✅ Advisor   │
+│✅ SQL       │ │✅ DevSecOps│ │✅ No Code   │ │✅ Node.js  │ │✅ Intl      │ │  Matching   │
+│✅ ML/AI     │ │✅ Privacy  │ │✅ BA Tools  │ │✅ Frontend │ │  Students   │ │✅ Schedule  │
+│✅ Dashboard │ │✅ Audit    │ │✅ Stakeholdrs│ │✅ Backend  │ │✅ Cultural  │ │  Setup     │
+│✅ $740 AUD  │ │✅ $740 AUD │ │✅ $740 AUD  │ │✅ $740 AUD │ │  Context    │ │✅ Consult  │
+│✅ 4 weeks   │ │✅ 4 weeks  │ │✅ 4 weeks   │ │✅ 4 weeks  │ │✅ Support   │ │  Booking   │
+└─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
 
-📊 TRACK ROUTING SUCCESS RATE: 83.3% (5/6 test scenarios)
-🎯 PERSONA DETECTION: 27.3% confidence (improved from 9.1%)  
-💬 RESPONSE STYLE: "Bootcamp Recruiter" (conversational, action-oriented)
+📊 OPTION 7 PERFORMANCE: 6 agents with specialized expertise
+🎯 CAREER TRACK ROUTING: 83.3% success with feature flag rollback
+🔄 ROLLBACK CAPABILITY: Instant revert with ROLLBACK_TO_ORIGINAL=true
+💬 ENHANCED SUPPORT: Preserved cultural and booking expertise
+📈 A/B TESTING: Gradual rollout with CAREER_TRACK_ROLLOUT percentage
 ```
 
 ## 🛡️ Comprehensive Security & Threat Protection
@@ -500,21 +506,66 @@ if (cachedIntent) {
 - 📋 **Advanced Monitoring**: Prometheus metrics with alerting
 - 📋 **A/B Testing Framework**: Feature rollout with performance monitoring
 
-### 🎯 **Trade-offs & Reasoning**
+### 🎯 **Option 7 Architecture Trade-offs & Implementation Rationale**
 
-#### **Multi-Track System Design Decisions**
+#### **Why Option 7: Smart Career Track + Essential Support**
+
+**The Challenge**: Agent Architecture Mismatch
+- **Problem Discovered**: Documentation claimed 4 career tracks but implementation used old 5-agent system (knowledge, cultural, voice, booking, schedule)
+- **User Impact**: Career queries routed to generic "knowledge" agent instead of specialized experts
+- **Business Risk**: Missing opportunity for track-specific guidance and enrollment optimization
+
+**5 Options Evaluated → Option 7 Chosen**
+```
+Option 1: Pure Career Tracks (4 agents)     ❌ Lost cultural/booking expertise
+Option 2: Enhanced Career Tracks (5 agents) ❌ Complexity without clear benefit  
+Option 3: Minimal Career Tracks (4 agents)  ❌ Insufficient support capabilities
+Option 4: Hybrid Approach (6 agents)        ⚠️  Good but communication gaps
+Option 5: Gradual Transition (5 agents)     ⚠️  Transition complexity
+Option 6: Smart Routing (6 agents)          ✅ Strong but missing features
+→ Option 7: Smart Career Track + Essential Support ✅ SELECTED
+```
+
+**Option 7 Decision Factors**:
+- **Career Specialization**: 4 dedicated career track agents (data_ai, cybersecurity, business_analyst, fullstack)
+- **Essential Support Preserved**: Cultural and booking agents maintained for complex needs
+- **Rollback Safety**: Instant revert capability with feature flags
+- **A/B Testing**: Gradual rollout with percentage-based control
+- **Performance**: Maintained 83.3% routing accuracy with enhanced capabilities
+
+#### **Technical Implementation Decisions**
+
+**Feature Flag Architecture**
+```typescript
+const FEATURE_FLAGS = {
+  USE_CAREER_TRACKS: process.env.FEATURE_CAREER_TRACKS !== 'false',
+  ROLLBACK_TO_ORIGINAL: process.env.ROLLBACK_TO_ORIGINAL === 'true', 
+  CAREER_TRACK_ROLLOUT: parseInt(process.env.CAREER_TRACK_ROLLOUT || '100'),
+};
+```
+- **Trade-off**: Added complexity vs production safety
+- **Benefit**: Zero-downtime rollback and gradual deployment capability
+- **Result**: Can instantly revert to legacy system if issues arise
+
+**Agent Routing Strategy**
+- **Decision**: Pattern-based classification with fallback to legacy agents
+- **Trade-off**: Deterministic routing vs ML-based classification
+- **Benefit**: Predictable behavior with clear debugging capability
+- **Result**: Reliable routing with transparent decision-making
+
+**Communication Query Handling**
+- **Problem**: Original voice agent handled communication queries
+- **Solution**: Contextual handling within career tracks (e.g., "presentation skills for business analyst")
+- **Trade-off**: Specialized communication agent vs context-aware career agents
+- **Result**: More relevant guidance linking communication skills to career context
+
+#### **Previous Multi-Track System Design Decisions**
 
 **Education Counselor → Bootcamp Recruiter Transformation**
 - **Problem**: Original responses were "walls of text from a book" - too academic and generic
 - **Decision**: Changed system prompt from empathetic counselor to conversational recruiter
 - **Trade-off**: Sacrificed academic thoroughness for practical, action-oriented guidance
 - **Result**: More engaging responses with clear next steps (booking consultations, enrollment)
-
-**Single Track → 4-Track Architecture** 
-- **Problem**: System was only focused on Business Analyst track, missing market opportunity
-- **Decision**: Expanded to BA, Data & AI, Cybersecurity, Full Stack Developer tracks
-- **Trade-off**: Increased complexity but 4x market coverage with track-specific guidance
-- **Result**: 83.3% track recognition accuracy with specialized responses per track
 
 **Response Length Optimization**
 - **Problem**: 800-token responses too long for mobile users and quick decision-making

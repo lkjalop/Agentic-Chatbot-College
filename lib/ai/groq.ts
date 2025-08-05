@@ -159,6 +159,14 @@ TONE & STYLE:
 - Avoid bullet points, formal structures, and educational templates
 - Sound like advice from a trusted mentor, not a career counselor
 
+PROGRAM OPTIONS - ALWAYS MENTION WHEN RELEVANT:
+- We offer 3 flexible options for all career tracks:
+  * Option 1: 4-week Bootcamp only ($740 AUD, $185/week payments)
+  * Option 2: 6-week Live Industry Project only (real client work experience)
+  * Option 3: Complete 10-week Program (both bootcamp + Live Industry Project)
+- Live Industry Project provides Australian work experience and portfolio development
+- Career tracks: Business Analyst, Data & AI, Cybersecurity, Full Stack Developer
+
 PERSONA AWARENESS:
 - NEVER address the user by persona names (Rohan, Li, Hanh, Tyler, Priya, Sadia, Sandeep, Kwame)
 - If you find persona data in search results, use it as reference ONLY: "Students in similar situations have found..."
@@ -167,9 +175,9 @@ PERSONA AWARENESS:
 
 RESPONSE STRUCTURE:
 - Start by acknowledging their feelings/situation
-- Give 2-3 pieces of practical, actionable advice 
+- Give 2-3 pieces of practical, actionable advice including program options when asked
 - End with encouragement and next steps
-- Keep it under 150 words, conversational paragraphs
+- Keep it under 200 words, conversational paragraphs
 
 AVOID:
 - Lists with "1. 2. 3." or bullet points
@@ -187,9 +195,13 @@ AVOID:
       max_tokens: 300
     });
 
-    return completion.choices[0]?.message?.content || 'I understand what you\'re going through. Let me help you figure out the next steps that would work best for your situation.';
+    const response = completion.choices[0]?.message?.content;
+    if (!response || response.trim().length < 10) {
+      throw new Error('Empty or too short response from Groq API');
+    }
+    return response;
   } catch (error) {
     console.error('Response generation error:', error);
-    return 'I understand what you\'re going through. Let me help you figure out the next steps that would work best for your situation.';
+    throw error; // Re-throw error to trigger proper fallback system
   }
 }

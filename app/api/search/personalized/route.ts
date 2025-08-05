@@ -449,16 +449,16 @@ async function generateAgentResponse(
     voice: `You're a communication coach helping ${userGreeting === 'there' ? 'someone' : userGreeting}. For "${query}", give encouraging speaking advice in 1-2 sentences. ${userGreeting === 'there' ? 'You might want to ask for their name to personalize your guidance. ' : ''}Ask what communication situation they're preparing for.`,
     
     // Option 7: Career Track Specialists + Essential Support
-    data_ai: `You're a Data & AI track specialist helping ${userGreeting === 'there' ? 'a student' : userGreeting}. Focus on data science, machine learning, Python, SQL, statistics, and AI careers. For "${query}", provide practical insights about data analysis skills, tools, and career paths in 1-2 conversational sentences. ${userGreeting === 'there' ? 'Feel free to ask their name for better personalization. ' : ''}Always mention our 4-week Data & AI Bootcamp ($740 AUD) when relevant.`,
+    data_ai: `You're a Data & AI track specialist helping ${userGreeting === 'there' ? 'a student' : userGreeting}. Focus on data science, machine learning, Python, SQL, statistics, and AI careers. For "${query}", provide practical insights about data analysis skills, tools, and career paths in 1-2 conversational sentences. ${userGreeting === 'there' ? 'Feel free to ask their name for better personalization. ' : ''}IMPORTANT: Always mention our 3 flexible options when discussing programs: Option 1: 4-week Data & AI Bootcamp ($740 AUD), Option 2: 6-week Live Industry Project, Option 3: Complete 10-week program combining both.`,
     
-    cybersecurity: `You're a Cybersecurity track specialist helping ${userGreeting === 'there' ? 'a student' : userGreeting}. Focus on security fundamentals, ethical hacking, compliance, AWS/Azure security, and cybersecurity careers. For "${query}", give expert security guidance in 1-2 conversational sentences. ${userGreeting === 'there' ? 'You can ask for their name to personalize advice. ' : ''}Always mention our 4-week Cybersecurity Bootcamp ($740 AUD) when relevant.`,
+    cybersecurity: `You're a Cybersecurity track specialist helping ${userGreeting === 'there' ? 'a student' : userGreeting}. Focus on security fundamentals, ethical hacking, compliance, AWS/Azure security, and cybersecurity careers. For "${query}", give expert security guidance in 1-2 conversational sentences. ${userGreeting === 'there' ? 'You can ask for their name to personalize advice. ' : ''}IMPORTANT: Always mention our 3 flexible options when discussing programs: Option 1: 4-week Cybersecurity Bootcamp ($740 AUD), Option 2: 6-week Live Industry Project, Option 3: Complete 10-week program combining both.`,
     
-    business_analyst: `You're a Business Analyst track specialist helping ${userGreeting === 'there' ? 'a student' : userGreeting}. Focus on requirements gathering, stakeholder management, process improvement, and BA careers. For "${query}", provide practical business analysis insights in 1-2 conversational sentences. ${userGreeting === 'there' ? 'Feel free to ask their name for better guidance. ' : ''}Always mention our 4-week Business Analyst Bootcamp ($740 AUD) when relevant. ${query.toLowerCase().includes('communication') || query.toLowerCase().includes('presentation') ? 'Note: This query has communication aspects - provide guidance on professional communication skills within the BA context.' : ''}`,
+    business_analyst: `You're a Business Analyst track specialist helping ${userGreeting === 'there' ? 'a student' : userGreeting}. Focus on requirements gathering, stakeholder management, process improvement, and BA careers. For "${query}", provide practical business analysis insights in 1-2 conversational sentences. ${userGreeting === 'there' ? 'Feel free to ask their name for better guidance. ' : ''}IMPORTANT: Always mention our 3 flexible options when discussing programs: Option 1: 4-week Business Analyst Bootcamp ($740 AUD), Option 2: 6-week Live Industry Project, Option 3: Complete 10-week program combining both. ${query.toLowerCase().includes('communication') || query.toLowerCase().includes('presentation') ? 'Note: This query has communication aspects - provide guidance on professional communication skills within the BA context.' : ''}`,
     
-    fullstack: `You're a Full Stack Development specialist helping ${userGreeting === 'there' ? 'a student' : userGreeting}. Focus on web development, React, Node.js, HTML/CSS, JavaScript, and full stack careers. For "${query}", give practical development insights in 1-2 conversational sentences. ${userGreeting === 'there' ? 'You can ask for their name to personalize guidance. ' : ''}Always mention our 4-week Full Stack Bootcamp ($740 AUD) when relevant. ${query.toLowerCase().includes('communication') || query.toLowerCase().includes('presentation') ? 'Note: This query has communication aspects - provide guidance on technical communication and presentation skills for developers.' : ''}`,
+    fullstack: `You're a Full Stack Development specialist helping ${userGreeting === 'there' ? 'a student' : userGreeting}. Focus on web development, React, Node.js, HTML/CSS, JavaScript, and full stack careers. For "${query}", give practical development insights in 1-2 conversational sentences. ${userGreeting === 'there' ? 'You can ask for their name to personalize guidance. ' : ''}IMPORTANT: Always mention our 3 flexible options when discussing programs: Option 1: 4-week Full Stack Bootcamp ($740 AUD), Option 2: 6-week Live Industry Project, Option 3: Complete 10-week program combining both. ${query.toLowerCase().includes('communication') || query.toLowerCase().includes('presentation') ? 'Note: This query has communication aspects - provide guidance on technical communication and presentation skills for developers.' : ''}`,
     
     // Essential Support Agents (preserved)
-    cultural: `You understand the international student experience and you're helping ${userGreeting === 'there' ? 'a student' : userGreeting}. For "${query}", give warm, culturally-aware advice in 1-2 sentences. Focus on visa considerations, work authorization, and cultural adaptation. ${userGreeting === 'there' ? 'You can ask for their name to better assist them. ' : ''}Ask what specific visa or cultural challenges they're facing.`,
+    cultural: `You understand the international student experience and you're helping ${userGreeting === 'there' ? 'a student' : userGreeting}. For "${query}", give warm, culturally-aware advice in 1-2 sentences. Focus on visa considerations, work authorization, and cultural adaptation. ${userGreeting === 'there' ? 'You can ask for their name to better assist them. ' : ''}When discussing career programs, mention our 6-week Live Industry Project which provides valuable Australian work experience for visa applications. Ask what specific visa or cultural challenges they're facing.`,
     
     booking: `You help connect people with advisors. You're assisting ${userGreeting === 'there' ? 'someone' : userGreeting}. For "${query}", provide smart booking assistance with context analysis using conversational, helpful language.`
   };
@@ -836,30 +836,64 @@ function getSimpleAgentRouting(query: string): string {
 function getAgentSpecificFallbackResponse(query: string, agent: string): string {
   const lowercaseQuery = query.toLowerCase();
   
+  // Determine if query is asking about pricing, duration, or program options
+  const isPricingQuery = lowercaseQuery.includes('cost') || lowercaseQuery.includes('price') || lowercaseQuery.includes('fee') || lowercaseQuery.includes('much');
+  const isDurationQuery = lowercaseQuery.includes('long') || lowercaseQuery.includes('week') || lowercaseQuery.includes('time') || lowercaseQuery.includes('duration');
+  const isOptionsQuery = isPricingQuery || isDurationQuery || lowercaseQuery.includes('option') || lowercaseQuery.includes('include');
+  
   // Smart course recommendation based on query content
-  let courseRecommendation = '';
-  if (lowercaseQuery.includes('data') || lowercaseQuery.includes('python') || lowercaseQuery.includes('sql')) {
-    courseRecommendation = 'Data & AI Analyst';
+  let primaryTrack = '';
+  if (lowercaseQuery.includes('data') || lowercaseQuery.includes('python') || lowercaseQuery.includes('sql') || lowercaseQuery.includes('ai')) {
+    primaryTrack = 'Data & AI Analyst';
   } else if (lowercaseQuery.includes('cyber') || lowercaseQuery.includes('security') || lowercaseQuery.includes('aws')) {
-    courseRecommendation = 'Cybersecurity';
-  } else if (lowercaseQuery.includes('developer') || lowercaseQuery.includes('coding') || lowercaseQuery.includes('react')) {
-    courseRecommendation = 'Full Stack Developer';
-  } else if (lowercaseQuery.includes('business') || lowercaseQuery.includes('requirements') || lowercaseQuery.includes('no coding')) {
-    courseRecommendation = 'Business Analyst';
+    primaryTrack = 'Cybersecurity';
+  } else if (lowercaseQuery.includes('developer') || lowercaseQuery.includes('coding') || lowercaseQuery.includes('react') || lowercaseQuery.includes('full stack')) {
+    primaryTrack = 'Full Stack Developer';
+  } else if (lowercaseQuery.includes('business') || lowercaseQuery.includes('requirements') || lowercaseQuery.includes('no coding') || lowercaseQuery.includes('ba')) {
+    primaryTrack = 'Business Analyst';
   } else {
-    courseRecommendation = 'Business Analyst, Data & AI Analyst, Cybersecurity, or Full Stack Developer';
+    primaryTrack = 'Business Analyst'; // Default recommendation
   }
 
+  // Generate 3-option structure for career tracks
+  const generateTrackOptions = (trackName: string) => {
+    if (isOptionsQuery) {
+      return `Great question! For ${trackName}, you have 3 flexible options:
+
+**Option 1:** 4-week ${trackName} Bootcamp only - $740 AUD ($185/week)
+**Option 2:** 6-week Live Industry Project only - Work on real client projects with professional teams
+**Option 3:** Complete 10-week Program - Both bootcamp + Live Industry Project for maximum impact
+
+Each option is designed to fit different schedules and career goals. Want to discuss which option suits your situation best?`;
+    } else {
+      return `Hey! I'd love to help you figure out if our ${trackName} bootcamp is a good fit for you. It's a 4-week program ($740 AUD or $185/week payments) covering hands-on skills you'll actually use at work. You can also add our optional 6-week Live Industry Project for real client experience. What specific aspect interests you most?`;
+    }
+  };
+
   const responses = {
-    schedule: `Hey! I can totally help you figure out the timing for your career steps. What's your timeline looking like?`,
+    business_analyst: generateTrackOptions('Business Analyst'),
+    data_ai: generateTrackOptions('Data & AI Analyst'),
+    cybersecurity: generateTrackOptions('Cybersecurity'),
+    fullstack: generateTrackOptions('Full Stack Developer'),
+    
+    schedule: `Hey! I can totally help you figure out the timing for your career steps. Our programs offer flexible options - 4-week bootcamps, 6-week Live Industry Projects, or the complete 10-week experience. What timeline works for you?`,
 
-    cultural: `I get the visa and cultural stuff - it's tough being an international student! Are you dealing with 485 visa timing or workplace culture questions?`,
+    cultural: `I get the visa and cultural stuff - it's tough being an international student! Our programs are designed with visa timelines in mind. The Live Industry Project especially gives you valuable Australian work experience. Are you dealing with 485 visa timing or workplace culture questions?`,
 
-    voice: `Communication skills are so important! Whether it's interviews or presentations, I'm here to help. What situation are you preparing for?`,
+    voice: `Communication skills are so important! Whether it's interviews or presentations, I'm here to help. Our bootcamps include presentation skills and you can practice in the Live Industry Project with real clients. What situation are you preparing for?`,
 
-    knowledge: `Career paths in Australia can be confusing, but you're in the right place! Are you thinking ${courseRecommendation}? All our 4-week bootcamps are $740 AUD with payment plans available.`,
+    knowledge: isOptionsQuery ? 
+      `All our career tracks offer 3 flexible options:
+      
+**4-week Bootcamp only:** $740 AUD - Core skills training
+**6-week Live Industry Project only:** Real client projects & portfolio building  
+**Complete 10-week Program:** Maximum career impact with both components
 
-    booking: `Perfect! Let me help you get connected with our student success coordinator for some personalized guidance. I'll make sure they have all the context about your situation before you chat.`
+Choose from Business Analyst, Data & AI, Cybersecurity, or Full Stack Developer tracks. Which option interests you?` 
+      : 
+      `Career paths in Australia can be confusing, but you're in the right place! I'd recommend checking out our ${primaryTrack} track. You can do just the 4-week bootcamp ($740 AUD), add the Live Industry Project, or do both for maximum impact. What's your career goal?`,
+
+    booking: `Perfect! Let me help you get connected with our student success coordinator. They'll explain all 3 options (bootcamp, Live Industry Project, or both) and help you choose what fits your timeline and goals best.`
   };
 
   return responses[agent as keyof typeof responses] || responses.knowledge;
