@@ -205,8 +205,10 @@ AVOID:
     }
     
     // Check for generic fallback responses that shouldn't be used
-    if (response.includes('I understand what you\'re going through')) {
-      console.log('❌ Groq returned generic fallback message, throwing error to trigger proper fallback');
+    if (response.includes('I understand what you\'re going through') ||
+        response.includes('Let me help you figure out the next steps') ||
+        response.length < 50) {
+      console.log('❌ Groq returned generic/short response, throwing error to trigger proper fallback');
       throw new Error('Groq returned generic fallback instead of proper response');
     }
     
