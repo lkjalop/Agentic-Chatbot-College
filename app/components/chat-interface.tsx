@@ -749,6 +749,8 @@ I'm here to help with educational and career questions. How else can I assist yo
           padding: 20px;
           border-top: 1px solid #e9ecef;
           width: 100%;
+          display: flex;
+          justify-content: center;
         }
 
         .input-wrapper {
@@ -756,6 +758,8 @@ I'm here to help with educational and career questions. How else can I assist yo
           align-items: center;
           gap: 8px;
           position: relative;
+          max-width: 840px;
+          width: 100%;
         }
 
         .input-field {
