@@ -374,64 +374,33 @@ I'm here to help with educational and career questions. How else can I assist yo
 
         {/* Chat Area */}
         <div className="chat-area">
-          <div className="chat-container">
-            <div className="messages-area">
-              {messages.map((message) => (
-                <div key={message.id} className="message">
-                  <div className={`avatar ${message.role === 'assistant' ? 'bot-avatar' : 'user-avatar'}`}>
-                    {message.role === 'assistant' ? '🤖' : session?.user?.name?.charAt(0) || 'U'}
+          <div className="chat-and-panel">
+            <div className="chat-container">
+              <div className="messages-area">
+                {messages.map((message) => (
+                  <div key={message.id} className="message">
+                    <div className={`avatar ${message.role === 'assistant' ? 'bot-avatar' : 'user-avatar'}`}>
+                      {message.role === 'assistant' ? '🤖' : session?.user?.name?.charAt(0) || 'U'}
+                    </div>
+                    <div className="message-content">
+                      <p>{message.content}</p>
+                    </div>
                   </div>
-                  <div className="message-content">
-                    <p>{message.content}</p>
+                ))}
+                {isLoading && (
+                  <div className="message">
+                    <div className="avatar bot-avatar">🤖</div>
+                    <div className="message-content">
+                      <p className="typing-indicator">Thinking...</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-              {isLoading && (
-                <div className="message">
-                  <div className="avatar bot-avatar">🤖</div>
-                  <div className="message-content">
-                    <p className="typing-indicator">Thinking...</p>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            <div className="input-container">
-              <div className="input-wrapper">
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder={isListening ? 'Listening...' : 'Type your message...'}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  disabled={isLoading}
-                />
-                <div className="input-buttons">
-                  {voiceSupported && (
-                    <button 
-                      className={`input-btn mic-btn ${isListening ? 'speech-active' : ''}`}
-                      onClick={toggleSpeechRecognition}
-                      disabled={isLoading}
-                    >
-                      🎤
-                    </button>
-                  )}
-                  <button 
-                    className="input-btn send-btn"
-                    onClick={sendMessage}
-                    disabled={isLoading || !inputValue.trim()}
-                  >
-                    ➤
-                  </button>
-                </div>
+                )}
+                <div ref={messagesEndRef} />
               </div>
             </div>
-          </div>
 
-          {/* Under the Hood Panel */}
-          <div className={`agent-panel ${agentPanelOpen ? 'visible' : ''}`}>
+            {/* Under the Hood Panel */}
+            <div className={`agent-panel ${agentPanelOpen ? 'visible' : ''}`}>
             <div className="panel-header">
               <span>⚙️ Under the Hood</span>
             </div>
@@ -481,10 +450,24 @@ I'm here to help with educational and career questions. How else can I assist yo
 
             {activeAgents.filter(a => a.type === 'reasoning').length > 0 && (
               <div className="agent-section">
-                <div className="section-title">AI REASONING</div>
-                <div style={{ padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid #e9ecef' }}>
-                  <p style={{ fontSize: '13px', color: '#6c757d', lineHeight: 1.5 }}>
-                    Query processed through multi-agent analysis with context-aware routing
+                <div className="section-title">REASONING</div>
+                <div style={{ 
+                  padding: '8px', 
+                  background: 'white', 
+                  borderRadius: '6px', 
+                  border: '1px solid #e9ecef',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  hyphens: 'auto'
+                }}>
+                  <p style={{ 
+                    fontSize: '12px', 
+                    color: '#6c757d', 
+                    lineHeight: 1.4,
+                    margin: 0,
+                    wordBreak: 'break-word'
+                  }}>
+                    Multi-vector search with persona ranking
                   </p>
                 </div>
               </div>
@@ -515,6 +498,40 @@ I'm here to help with educational and career questions. How else can I assist yo
                 </div>
               </div>
             )}
+            </div>
+          </div>
+          
+          {/* Input Container - Full Width */}
+          <div className="input-container">
+            <div className="input-wrapper">
+              <input
+                type="text"
+                className="input-field"
+                placeholder={isListening ? 'Listening...' : 'Type your message...'}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={isLoading}
+              />
+              <div className="input-buttons">
+                {voiceSupported && (
+                  <button 
+                    className={`input-btn mic-btn ${isListening ? 'speech-active' : ''}`}
+                    onClick={toggleSpeechRecognition}
+                    disabled={isLoading}
+                  >
+                    🎤
+                  </button>
+                )}
+                <button 
+                  className="input-btn send-btn"
+                  onClick={sendMessage}
+                  disabled={isLoading || !inputValue.trim()}
+                >
+                  ➤
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -690,18 +707,27 @@ I'm here to help with educational and career questions. How else can I assist yo
         .chat-area {
           flex: 1;
           display: flex;
+          flex-direction: column;
           background: #ffffff;
+        }
+
+        .chat-and-panel {
+          flex: 1;
+          display: flex;
+          overflow: hidden;
         }
 
         .chat-container {
           flex: 1;
           display: flex;
           flex-direction: column;
+          width: 80%;
+          max-width: none;
         }
 
         .messages-area {
           flex: 1;
-          padding: 20px;
+          padding: 20px 30px;
           overflow-y: auto;
           width: 100%;
         }
@@ -746,20 +772,20 @@ I'm here to help with educational and career questions. How else can I assist yo
         }
 
         .input-container {
-          padding: 20px;
+          padding: 20px 30px;
           border-top: 1px solid #e9ecef;
           width: 100%;
-          display: flex;
-          justify-content: center;
+          background: #ffffff;
+          box-sizing: border-box;
         }
 
         .input-wrapper {
           display: flex;
           align-items: center;
-          gap: 8px;
-          position: relative;
-          max-width: 840px;
+          gap: 12px;
           width: 100%;
+          max-width: 100%;
+          margin: 0 auto;
         }
 
         .input-field {
@@ -821,12 +847,17 @@ I'm here to help with educational and career questions. How else can I assist yo
         }
 
         .agent-panel {
-          width: 320px;
+          width: 20%;
+          max-width: 300px;
+          min-width: 200px;
           background: #f8f9fa;
           border-left: 1px solid #e9ecef;
-          padding: 20px;
+          padding: 15px;
           overflow-y: auto;
+          overflow-x: hidden;
           display: none;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
         }
 
         .agent-panel.visible {

@@ -486,7 +486,7 @@ async function generateAgentResponse(
     
     // Create enhanced context that includes user name handling
     const enhancedResults = searchResults.results || [];
-    const response = await generateResponse(query, enhancedResults, mockIntent);
+    const response = await generateResponse(query, enhancedResults, mockIntent, conversationHistory);
     
     // Post-process response to ensure proper name usage
     if (response && userGreeting !== 'there') {

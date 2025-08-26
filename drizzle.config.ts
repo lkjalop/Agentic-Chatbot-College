@@ -1,16 +1,35 @@
 import { defineConfig } from 'drizzle-kit';
-import { config } from 'dotenv';
+import { validateEnvironment } from './lib/config/environment';
 
-// Load environment variables
-config({ path: '.env.local' });
+// Load and validate environment variables
+const env = validateEnvironment();
 
 export default defineConfig({
-  schema: './lib/db/schema.ts',
-  out: './drizzle',
+  // Database connection
   dialect: 'postgresql',
   dbCredentials: {
-    url: process.env.NEON_DATABASE_URL_DIRECT || 'postgresql://dummy:dummy@localhost:5432/dummy',
+    url: env.NEON_DATABASE_URL || 'postgresql://dummy:dummy@localhost:5432/dummy',
   },
+
+  // Schema and migrations
+  schema: './lib/db/schema.ts',
+  out: './lib/db/migrations',
+  
+  // Migration settings
+  migrations: {
+    table: 'drizzle_migrations',
+    schema: 'public',
+  },
+
+  // Development settings
   verbose: true,
   strict: true,
+
+  // Introspection settings for schema sync
+  introspect: {
+    casing: 'snake_case',
+  },
+
+  // Type generation
+  schemaFilter: ['public'],
 });

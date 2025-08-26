@@ -5,6 +5,8 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
+  // Enable standalone output for Docker
+  output: 'standalone',
   // Exclude scripts folder from TypeScript checking during build
   typescript: {
     ignoreBuildErrors: true,

@@ -7,9 +7,16 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/migrate.ts migrate",
+    "db:status": "tsx scripts/migrate.ts status", 
+    "db:validate": "tsx scripts/migrate.ts validate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "generate:synthetic": "tsx scripts/generate-synthetic-data.ts"
+    "generate:synthetic": "tsx scripts/generate-synthetic-data.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.10.0",
@@ -44,17 +51,24 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.4",
+    "@testing-library/react": "^16.3.0",
     "@types/bcryptjs": "^3.0.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^22.5.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/supertest": "^6.0.3",
     "@types/ws": "^8.5.10",
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.28.0",
     "eslint": "^8.57.0",
     "eslint-config-next": "^15.0.3",
     "ignore-loader": "^0.1.2",
+    "jest": "^30.0.5",
+    "jest-environment-jsdom": "^30.0.5",
     "postcss": "^8.4.47",
+    "supertest": "^7.1.4",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.19.1",
     "typescript": "^5.6.2"

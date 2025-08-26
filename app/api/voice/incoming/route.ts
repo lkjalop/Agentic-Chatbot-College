@@ -1,66 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import twilio from 'twilio';
-
-const VoiceResponse = twilio.twiml.VoiceResponse;
-
-// Store conversation context per call (in production, use Redis or database)
-const conversations = new Map<string, Array<{ role: string; content: string; timestamp: Date }>>();
+import { voiceService } from '@/lib/services/twilio-service';
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const callSid = formData.get('CallSid') as string;
+    const from = formData.get('From') as string;
+    const to = formData.get('To') as string;
 
-    // Initialize conversation for this call
-    if (!conversations.has(callSid)) {
-      conversations.set(callSid, []);
-    }
+    console.log(`📞 Incoming call webhook: ${callSid} from ${from} to ${to}`);
 
-    const twiml = new VoiceResponse();
+    // Handle incoming call through voice service
+    const twiml = await voiceService.handleIncomingCall(callSid, from, to);
 
-    // Welcome message
-    twiml.say({
-      voice: 'alice',
-      language: 'en-US'
-    }, 'Hello! Welcome to Employment Advantage College AI Assistant. How can I help you with your career and education questions today?');
-
-    // Start gathering speech input
-    const gather = twiml.gather({
-      input: ['speech'],
-      timeout: 5,
-      speechTimeout: 'auto',
-      action: '/api/voice/process-speech',
-      method: 'POST'
-    });
-
-    gather.say({
-      voice: 'alice',
-      language: 'en-US'
-    }, 'Please tell me your question about courses, careers, or anything else I can help with.');
-
-    // Fallback if no speech detected
-    twiml.say({
-      voice: 'alice',
-      language: 'en-US'
-    }, 'I didn\'t hear anything. Please call back when you\'re ready to chat. Goodbye!');
-
-    twiml.hangup();
-
-    return new NextResponse(twiml.toString(), {
+    return new NextResponse(twiml, {
       headers: { 'Content-Type': 'text/xml' }
     });
 
   } catch (error) {
     console.error('Error handling incoming call:', error);
     
-    const twiml = new VoiceResponse();
-    twiml.say({
-      voice: 'alice',
-      language: 'en-US'
-    }, 'I\'m sorry, there was an error. Please try calling again later.');
-    twiml.hangup();
+    // Fallback TwiML for errors
+    const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="alice">
+        I'm sorry, there was an error. Let me transfer you to our human team.
+    </Say>
+    <Dial>+61234567890</Dial>
+</Response>`;
 
-    return new NextResponse(twiml.toString(), {
+    return new NextResponse(errorTwiml, {
       headers: { 'Content-Type': 'text/xml' }
     });
   }

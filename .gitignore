@@ -48,4 +48,4 @@ next-env.d.ts
 Thumbs.db
 
 # pnpm
-pnpm-lock.yaml
+pnpm-lock.yaml.env.local

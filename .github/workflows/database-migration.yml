@@ -1,0 +1,222 @@
+name: Database Migrations
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'lib/db/migrations/**'
+      - 'lib/db/schema.ts'
+      - 'drizzle.config.ts'
+  
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to migrate'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # Validate migrations before applying
+  validate-migrations:
+    name: 🔍 Validate Migrations
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Validate migration files
+        run: |
+          # Check migration naming convention
+          for file in lib/db/migrations/*.sql; do
+            if [[ ! $(basename "$file") =~ ^[0-9]{4}_.+\.sql$ ]]; then
+              echo "❌ Migration file $file doesn't follow naming convention: NNNN_description.sql"
+              exit 1
+            fi
+          done
+          echo "✅ All migration files follow naming convention"
+
+      - name: Check for SQL injection patterns
+        run: |
+          # Basic check for potentially dangerous SQL patterns
+          if grep -r "EXEC\|exec\|xp_\|sp_password" lib/db/migrations/; then
+            echo "❌ Potentially dangerous SQL patterns detected"
+            exit 1
+          fi
+          echo "✅ No dangerous SQL patterns detected"
+
+  # Apply migrations to staging
+  migrate-staging:
+    name: 🚀 Migrate Staging Database
+    runs-on: ubuntu-latest
+    needs: [validate-migrations]
+    if: github.ref == 'refs/heads/develop' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    environment: staging
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check migration status
+        run: npm run db:status
+        env:
+          NEON_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          NODE_ENV: staging
+
+      - name: Run migrations
+        run: npm run db:migrate
+        env:
+          NEON_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          NODE_ENV: staging
+
+      - name: Validate schema
+        run: npm run db:validate
+        env:
+          NEON_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          NODE_ENV: staging
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ Database migrations applied successfully to staging environment'
+            })
+
+  # Apply migrations to production (manual approval required)
+  migrate-production:
+    name: 🚀 Migrate Production Database
+    runs-on: ubuntu-latest
+    needs: [validate-migrations]
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create backup notification
+        run: |
+          echo "⚠️ PRODUCTION MIGRATION STARTING"
+          echo "Ensure database backup is created before proceeding"
+          echo "For Neon: Create a branch or use built-in backup system"
+
+      - name: Check migration status
+        run: npm run db:status
+        env:
+          NEON_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          NODE_ENV: production
+
+      - name: Run migrations with extra logging
+        run: |
+          echo "🔄 Starting production migrations..."
+          npm run db:migrate
+          echo "✅ Production migrations completed"
+        env:
+          NEON_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          NODE_ENV: production
+
+      - name: Validate schema
+        run: npm run db:validate
+        env:
+          NEON_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          NODE_ENV: production
+
+      - name: Notify on success
+        run: |
+          echo "✅ PRODUCTION MIGRATION COMPLETED SUCCESSFULLY"
+          echo "Database schema is valid and ready for use"
+
+  # Rollback job (manual trigger only)
+  rollback-migration:
+    name: ⏪ Rollback Migration
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && contains(github.event.inputs.environment, 'rollback')
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Manual rollback instructions
+        run: |
+          echo "🚨 ROLLBACK PROCEDURE"
+          echo "===================="
+          echo ""
+          echo "Database rollbacks must be performed manually for safety."
+          echo ""
+          echo "Steps to rollback:"
+          echo "1. Identify the specific migration to rollback"
+          echo "2. Create a rollback SQL script"
+          echo "3. Test rollback script on staging first"
+          echo "4. Apply rollback script to production"
+          echo "5. Update migration tracking table"
+          echo ""
+          echo "For complex rollbacks, consider:"
+          echo "- Restoring from backup"
+          echo "- Point-in-time recovery"
+          echo "- Data migration scripts"
+
+  # Send notifications
+  notify:
+    name: 📢 Send Notifications
+    runs-on: ubuntu-latest
+    needs: [migrate-staging, migrate-production]
+    if: always()
+    
+    steps:
+      - name: Send notification
+        run: |
+          if [ "${{ needs.migrate-staging.result }}" == "success" ]; then
+            echo "✅ Staging migration successful"
+          fi
+          
+          if [ "${{ needs.migrate-production.result }}" == "success" ]; then
+            echo "✅ Production migration successful"
+          fi
+          
+          if [ "${{ needs.migrate-staging.result }}" == "failure" ] || [ "${{ needs.migrate-production.result }}" == "failure" ]; then
+            echo "❌ Migration failed - check logs"
+            exit 1
+          fi
