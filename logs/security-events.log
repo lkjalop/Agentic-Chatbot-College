@@ -307,3 +307,10 @@
 {"timestamp":"2025-08-26T13:32:07.245Z","channel":"chat","sessionId":"anonymous","blocked":false,"reason":"","flags":[],"humanEscalation":false}
 {"timestamp":"2025-08-26T13:32:41.328Z","channel":"chat","sessionId":"anonymous","blocked":false,"reason":"","flags":[],"humanEscalation":false}
 {"timestamp":"2025-08-26T13:33:04.000Z","channel":"chat","sessionId":"anonymous","blocked":true,"reason":"crisis_intervention","flags":["suicide_risk","critical_crisis"],"humanEscalation":true}
+{"timestamp":"2025-08-27T11:00:32.017Z","channel":"chat","sessionId":"anonymous","blocked":false,"reason":"","flags":[],"humanEscalation":false}
+{"timestamp":"2025-08-27T11:36:07.082Z","channel":"chat","sessionId":"anonymous","blocked":false,"reason":"","flags":[],"humanEscalation":false}
+{"timestamp":"2025-08-27T11:36:45.543Z","channel":"chat","sessionId":"anonymous","blocked":false,"reason":"","flags":[],"humanEscalation":false}
+{"timestamp":"2025-08-27T11:37:39.950Z","channel":"chat","sessionId":"anonymous","blocked":true,"reason":"critical_pii_detected","flags":["credit_card"],"humanEscalation":true}
+{"timestamp":"2025-08-27T11:37:58.288Z","channel":"chat","sessionId":"anonymous","blocked":false,"reason":"","flags":[],"humanEscalation":false}
+{"timestamp":"2025-08-27T11:46:26.739Z","channel":"chat","sessionId":"anonymous","blocked":false,"reason":"","flags":[],"humanEscalation":false}
+{"timestamp":"2025-08-27T12:03:34.022Z","channel":"chat","sessionId":"anonymous","blocked":false,"reason":"","flags":[],"humanEscalation":false}

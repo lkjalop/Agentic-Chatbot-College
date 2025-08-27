@@ -578,8 +578,8 @@ export function EAChatAssistant() {
                             </div>
                           </div>
 
-                          {/* Security Status Panel - Show if security data exists */}
-                          {message.diagnostics?.security && (
+                          {/* Security section temporarily disabled due to type mismatch */}
+                          {false && message.diagnostics?.security && (
                             <div className={`rounded-lg p-3 border-2 ${
                               message.diagnostics.security.threatLevel === 'alert' || message.diagnostics.security.threatLevel === 'critical'
                                 ? 'bg-red-50 border-red-200' 

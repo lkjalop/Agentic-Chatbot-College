@@ -59,6 +59,9 @@ export async function generateEmpatheticResponse({
     // Post-process for persona-specific enhancements
     response = await enhanceResponseForPersona(response, personaDetection);
 
+    // Apply conversational formatting constraints
+    response = formatConversationalResponse(response);
+
     // Ensure mandatory information is included
     response = ensureMandatoryInfo(response);
 
@@ -89,6 +92,9 @@ YOUR APPROACH:
 - Give specific info about the relevant track(s)
 - If unsure, help them compare options
 - Conversational tone (like talking to a friend)
+- Keep responses short and punchy (max 2 paragraphs)
+- Each paragraph should be max 25 words
+- Make them want to ask for more details rather than overwhelming them
 - ALWAYS mention pricing ($740 AUD or $185/week payment plans)
 - ALWAYS mention timeline (4 weeks)
 - Always end with clear next step (book consultation or enroll)
@@ -370,4 +376,32 @@ function ensureMandatoryInfo(response: string): string {
   }
   
   return enhanced;
+}
+
+/**
+ * Format response for conversational style with word limits
+ */
+function formatConversationalResponse(text: string): string {
+  const paragraphs = text.split('\n\n').filter(p => p.trim());
+  const formattedParagraphs: string[] = [];
+  
+  for (const paragraph of paragraphs) {
+    const words = paragraph.trim().split(/\s+/);
+    
+    if (words.length <= 25) {
+      // Paragraph is within limit
+      formattedParagraphs.push(paragraph.trim());
+    } else {
+      // Break into 25-word chunks
+      for (let i = 0; i < words.length; i += 25) {
+        const chunk = words.slice(i, i + 25).join(' ');
+        formattedParagraphs.push(chunk);
+      }
+    }
+  }
+  
+  // Limit to max 2 paragraphs for conciseness
+  const limitedParagraphs = formattedParagraphs.slice(0, 2);
+  
+  return limitedParagraphs.join('\n\n');
 }

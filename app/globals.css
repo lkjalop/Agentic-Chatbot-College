@@ -140,6 +140,43 @@
     z-index: 60;
   }
   
+  /* EA Chat Assistant diagnostic panel - CRITICAL WIDTH FIXES */
+  .ea-diagnostic-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(30%, 400px) !important;
+    max-width: 400px !important;
+    background: #f8f9fa;
+    border-left: 1px solid var(--ea-gray-border);
+    display: flex;
+    flex-direction: column;
+    z-index: 50;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  
+  /* Force text truncation in diagnostic panel */
+  .ea-diagnostic-panel .text-sm {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  /* Truncate long reasoning text */
+  .ea-diagnostic-panel .space-y-3 > div:last-child {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+  }
+  
   /* Schedule button mobile styling */
   .schedule-button-mobile {
     width: 100%;
@@ -304,4 +341,20 @@
 *:focus-visible {
   outline: 2px solid var(--ea-orange);
   outline-offset: 2px;
+}
+
+/* Mobile responsiveness for EA Chat Assistant */
+@media (max-width: 768px) {
+  .ea-diagnostic-panel {
+    width: min(40%, 300px) !important;
+    max-width: 300px !important;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  
+  /* Show mobile close button */
+  .ea-diagnostic-mobile-close {
+    display: flex !important;
+  }
 }

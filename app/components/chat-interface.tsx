@@ -199,9 +199,8 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
         id: 'security',
         name: 'Security Scan',
         icon: diagnostics.security.threatLevel === 'safe' ? '🛡️' : '⚠️',
-        type: 'security',
-        confidence: diagnostics.security.threatLevel === 'safe' ? 100 : 50,
-        details: diagnostics.security
+        type: 'agent',
+        confidence: diagnostics.security.threatLevel === 'safe' ? 100 : 50
       });
     }
     
@@ -403,6 +402,13 @@ I'm here to help with educational and career questions. How else can I assist yo
             <div className={`agent-panel ${agentPanelOpen ? 'visible' : ''}`}>
             <div className="panel-header">
               <span>⚙️ Under the Hood</span>
+              <button 
+                className="mobile-close-btn"
+                onClick={toggleAgentPanel}
+                aria-label="Close Under the Hood panel"
+              >
+                ✕
+              </button>
             </div>
             <div className="panel-subtitle">See how the AI processes your questions</div>
 
@@ -440,8 +446,8 @@ I'm here to help with educational and career questions. How else can I assist yo
                 {activeAgents.filter(a => a.type === 'source').map(agent => (
                   <div key={agent.id} className="agent-item">
                     <div className="agent-icon">{agent.icon}</div>
-                    <div className="agent-name" style={{ fontSize: '13px', color: '#6c757d' }}>
-                      {agent.name}
+                    <div className="agent-name source-title">
+                      {agent.name.length > 40 ? `${agent.name.substring(0, 40)}...` : agent.name}
                     </div>
                   </div>
                 ))}
@@ -451,49 +457,13 @@ I'm here to help with educational and career questions. How else can I assist yo
             {activeAgents.filter(a => a.type === 'reasoning').length > 0 && (
               <div className="agent-section">
                 <div className="section-title">REASONING</div>
-                <div style={{ 
-                  padding: '8px', 
-                  background: 'white', 
-                  borderRadius: '6px', 
-                  border: '1px solid #e9ecef',
-                  wordWrap: 'break-word',
-                  overflowWrap: 'break-word',
-                  hyphens: 'auto'
-                }}>
-                  <p style={{ 
-                    fontSize: '12px', 
-                    color: '#6c757d', 
-                    lineHeight: 1.4,
-                    margin: 0,
-                    wordBreak: 'break-word'
-                  }}>
-                    Multi-vector search with persona ranking
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {activeAgents.filter(a => a.type === 'security').length > 0 && (
-              <div className="agent-section">
-                <div className="section-title">SECURITY SCAN</div>
-                {activeAgents.filter(a => a.type === 'security').map(agent => (
-                  <div key={agent.id} className="agent-item">
-                    <div className="agent-icon">{agent.icon}</div>
-                    <div className="agent-name">Security Monitor</div>
-                    {agent.confidence && (
-                      <div className="confidence" style={{ 
-                        color: agent.confidence === 100 ? '#28a745' : '#ffc107' 
-                      }}>
-                        {agent.confidence === 100 ? 'SAFE' : 'ALERT'}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                <div style={{ padding: '8px 12px', background: '#f8f9fa', borderRadius: '6px', marginTop: '8px' }}>
-                  <p style={{ fontSize: '12px', color: '#6c757d', margin: 0 }}>
-                    ✅ PII Detection: Clear<br/>
-                    ✅ Threat Scan: Passed<br/>
-                    ✅ Content Filter: Safe
+                <div className="reasoning-box">
+                  <p className="reasoning-text">
+                    {(() => {
+                      const reasoningAgent = activeAgents.find(a => a.type === 'reasoning');
+                      const text = reasoningAgent?.name || 'Multi-vector search with persona ranking';
+                      return text.length > 100 ? `${text.substring(0, 100)}...` : text;
+                    })()}
                   </p>
                 </div>
               </div>
@@ -848,7 +818,7 @@ I'm here to help with educational and career questions. How else can I assist yo
 
         .agent-panel {
           width: 20%;
-          max-width: 300px;
+          max-width: min(300px, 20vw) !important;
           min-width: 200px;
           background: #f8f9fa;
           border-left: 1px solid #e9ecef;
@@ -858,6 +828,7 @@ I'm here to help with educational and career questions. How else can I assist yo
           display: none;
           word-wrap: break-word;
           overflow-wrap: break-word;
+          word-break: break-word;
         }
 
         .agent-panel.visible {
@@ -867,11 +838,65 @@ I'm here to help with educational and career questions. How else can I assist yo
         .panel-header {
           display: flex;
           align-items: center;
+          justify-content: space-between;
           gap: 10px;
           margin-bottom: 24px;
           font-size: 16px;
           font-weight: 600;
           color: #333;
+        }
+
+        .mobile-close-btn {
+          display: none;
+          width: 24px;
+          height: 24px;
+          border: none;
+          background: #e9ecef;
+          color: #495057;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+          transition: all 0.2s;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        
+        .mobile-close-btn:hover {
+          background: #dee2e6;
+        }
+
+        .source-title {
+          font-size: 13px;
+          color: #6c757d;
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .reasoning-box {
+          padding: 8px;
+          background: white;
+          border-radius: 6px;
+          border: 1px solid #e9ecef;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          word-break: break-word;
+          overflow: hidden;
+        }
+
+        .reasoning-text {
+          font-size: 12px;
+          color: #6c757d;
+          line-height: 1.4;
+          margin: 0;
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
         }
 
         .panel-subtitle {
@@ -945,12 +970,38 @@ I'm here to help with educational and career questions. How else can I assist yo
           }
 
           .agent-panel {
+            width: min(35%, 250px) !important;
+            max-width: 250px !important;
             position: fixed;
             right: 0;
             top: 60px;
             height: calc(100vh - 60px);
             z-index: 200;
             box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+          }
+
+          .mobile-close-btn {
+            display: flex !important;
+          }
+
+          .chat-area {
+            width: 100% !important;
+          }
+
+          .input-container {
+            padding: 15px 20px;
+          }
+        }
+
+        /* Samsung Galaxy Ultra specific */
+        @media (max-width: 414px) {
+          .agent-panel {
+            width: min(40%, 200px) !important;
+            max-width: 200px !important;
+          }
+
+          .input-container {
+            padding: 12px 16px;
           }
         }
       `}</style>
