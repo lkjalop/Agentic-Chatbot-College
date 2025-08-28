@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { AnalyticsService } from '@/lib/analytics/analytics-service';
-import { useEnhancedVoiceRecognition } from '@/lib/hooks/use-enhanced-voice';
-import { useTextToSpeech } from '@/lib/hooks/use-voice';
+import { useVoiceRecognition, useTextToSpeech } from '@/lib/hooks/use-voice';
 import { ScheduleButton, extractCalendlyUrl, removeCalendlyUrl } from './schedule-button';
 
 interface Message {
@@ -79,19 +78,18 @@ export function EAChatAssistant() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { isListening, transcript, startListening, stopListening, resetTranscript, source } = useEnhancedVoiceRecognition({
-    continuous: true,
+  const { isListening, transcript, startListening, stopListening, resetTranscript } = useVoiceRecognition({
+    continuous: false, // Changed from true to false like the working voice-enhanced-search
     interimResults: true,
-    preferOpenAI: true, // Prefer OpenAI Whisper over Web Speech API
-    onResult: (transcript, isFinal, source) => {
+    onResult: (transcript, isFinal) => {
       if (isFinal) {
-        console.log(`🎤 Voice transcription from ${source}: "${transcript}"`);
+        console.log(`🎤 Web Speech API transcription: "${transcript}"`);
         setInputValue(transcript);
-        stopListening();
+        resetTranscript(); // Reset after setting the value
       }
     },
-    onError: (error, source) => {
-      console.error(`❌ Voice error from ${source}:`, error);
+    onError: (error) => {
+      console.error('❌ Web Speech API error:', error);
     }
   });
 
@@ -205,7 +203,7 @@ export function EAChatAssistant() {
     if (isListening) {
       stopListening();
     } else {
-      resetTranscript();
+      resetTranscript(); // Reset transcript before starting (like working voice-enhanced-search)
       startListening();
     }
   }, [isListening, stopListening, resetTranscript, startListening]);
@@ -609,7 +607,7 @@ export function EAChatAssistant() {
                 {isListening && (
                   <div className="mb-2 flex items-center gap-2 text-sm text-[--ea-orange] font-medium">
                     <div className="w-2 h-2 bg-[--ea-orange] rounded-full animate-pulse"></div>
-                    Listening... (using {source === 'openai' ? 'OpenAI Whisper' : 'Web Speech API'})
+                    Listening... (speak naturally)
                   </div>
                 )}
                 <div className="flex items-end gap-3 bg-gray-50 border-2 border-gray-200 rounded-xl p-2 focus-within:border-[--ea-orange] focus-within:bg-white transition-all duration-200">
