@@ -291,7 +291,7 @@ export function EAChatAssistant() {
             onClick={() => setIsOpen(false)}
           />
           
-          <div className="fixed top-0 right-[10%] bottom-0 w-[70%] max-w-6xl bg-white shadow-2xl z-[2000] flex transition-transform duration-300 md:right-[10%] md:w-[70%] max-md:right-0 max-md:w-full">
+          <div className="fixed top-0 right-[10%] bottom-0 w-[70%] max-w-6xl bg-white shadow-2xl z-[2000] flex transition-transform duration-300 md:right-[10%] md:w-[70%] max-md:right-0 max-md:w-full" style={{display: 'flex', width: '100%', gap: 0, justifyContent: 'space-between'}}>
             {/* Sidebar */}
             <aside className={`${isSidebarOpen ? 'w-64' : 'w-0'} bg-gray-50 border-r border-gray-200 flex flex-col transition-all duration-300 overflow-hidden absolute md:relative h-full z-10 md:z-auto`}>
               <div className="p-5 border-b border-gray-200 bg-white">
@@ -327,8 +327,8 @@ export function EAChatAssistant() {
               />
             )}
 
-            {/* Main Chat - FIXED 70% WIDTH */}
-            <main className="flex-1 flex flex-col bg-white" style={{flex: '0 0 70%'}}>
+            {/* Main Chat */}
+            <main className="flex flex-col bg-white" style={{flex: '1 1 70%', minWidth: 0, marginRight: 0}}>
               {/* Header */}
               <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between min-h-18">
                 <div className="flex items-center gap-4">
