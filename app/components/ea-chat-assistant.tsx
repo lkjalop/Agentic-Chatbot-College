@@ -291,7 +291,7 @@ export function EAChatAssistant() {
             onClick={() => setIsOpen(false)}
           />
           
-          <div className="fixed top-0 left-0 right-0 bottom-0 bg-white shadow-2xl z-[2000] flex transition-transform duration-300" style={{display: 'flex', width: '100%', gap: 0, justifyContent: 'space-between'}}>
+          <div className="fixed top-0 right-[10%] bottom-0 w-[70%] max-w-6xl bg-white shadow-2xl z-[2000] flex transition-transform duration-300 md:right-[10%] md:w-[70%] max-md:right-0 max-md:w-full" style={{display: 'flex', width: '100%', gap: 0}}>
             {/* Sidebar */}
             <aside className={`${isSidebarOpen ? 'w-64' : 'w-0'} bg-gray-50 border-r border-gray-200 flex flex-col transition-all duration-300 overflow-hidden absolute md:relative h-full z-10 md:z-auto`}>
               <div className="p-5 border-b border-gray-200 bg-white">
@@ -328,7 +328,7 @@ export function EAChatAssistant() {
             )}
 
             {/* Main Chat */}
-            <main className="flex flex-col bg-white" style={{flex: '1 1 70%', minWidth: 0, marginRight: 0}}>
+            <main className="flex flex-col bg-white" style={{flex: '1 1 70%', minWidth: 0, overflow: 'hidden'}}>
               {/* Header */}
               <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between min-h-18">
                 <div className="flex items-center gap-4">
@@ -499,7 +499,7 @@ export function EAChatAssistant() {
 
                 {/* Diagnostic Panel */}
                 {isDiagnosticOpen && (
-                  <div className="ea-diagnostic-panel">
+                  <div className="ea-diagnostic-panel" style={{flex: '0 0 30%', maxWidth: '30%', wordWrap: 'break-word', overflowWrap: 'anywhere', overflowX: 'hidden'}}>
                     <div className="p-4 border-b border-gray-200 bg-white flex items-center justify-between">
                       <div>
                         <h3 className="font-semibold text-[--ea-text-primary] flex items-center gap-2">
