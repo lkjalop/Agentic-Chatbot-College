@@ -53,6 +53,7 @@ export function EAChatAssistant() {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [chatSessions] = useState<ChatSession[]>([
     {
       id: '1',
@@ -106,7 +107,7 @@ export function EAChatAssistant() {
   };
 
   const sendMessage = useCallback(async () => {
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -117,6 +118,7 @@ export function EAChatAssistant() {
 
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
+    setIsLoading(true);
     setIsTyping(true);
     autoResizeTextarea();
 
@@ -181,9 +183,10 @@ export function EAChatAssistant() {
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
+      setIsLoading(false);
       setIsTyping(false);
     }
-  }, [inputValue, session?.user?.id]);
+  }, [inputValue, isLoading, session?.user?.id]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -324,8 +327,8 @@ export function EAChatAssistant() {
               />
             )}
 
-            {/* Main Chat */}
-            <main className="flex-1 flex flex-col bg-white">
+            {/* Main Chat - FIXED 70% WIDTH */}
+            <main className="flex-1 flex flex-col bg-white" style={{flex: '0 0 70%'}}>
               {/* Header */}
               <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between min-h-18">
                 <div className="flex items-center gap-4">
@@ -422,7 +425,7 @@ export function EAChatAssistant() {
                         )}
                       </div>
                       <div className="flex-1">
-                        <div className="ea-message-bubble">
+                        <div className="ea-message-bubble break-words overflow-wrap-anywhere whitespace-pre-wrap">
                           {(() => {
                             const calendlyUrl = extractCalendlyUrl(message.content);
                             if (calendlyUrl && message.type === 'assistant') {
@@ -571,109 +574,20 @@ export function EAChatAssistant() {
                             </div>
                             <div className="space-y-1">
                               {message.diagnostics?.sources.map((source, idx) => (
-                                <div key={idx} className="text-xs text-[--ea-text-primary] bg-gray-50 px-2 py-1 rounded">
+                                <div key={idx} className="text-xs text-[--ea-text-primary] bg-gray-50 px-2 py-1 rounded break-words overflow-wrap-anywhere">
                                   {source}
                                 </div>
                               ))}
                             </div>
                           </div>
 
-                          {/* Security section temporarily disabled due to type mismatch */}
-                          {false && message.diagnostics?.security && (
-                            <div className={`rounded-lg p-3 border-2 ${
-                              message.diagnostics.security.threatLevel === 'alert' || message.diagnostics.security.threatLevel === 'critical'
-                                ? 'bg-red-50 border-red-200' 
-                                : message.diagnostics.security.threatLevel === 'warning'
-                                ? 'bg-yellow-50 border-yellow-200'
-                                : 'bg-green-50 border-green-200'
-                            }`}>
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className={`w-3 h-3 rounded-full ${
-                                  message.diagnostics.security.threatLevel === 'alert' || message.diagnostics.security.threatLevel === 'critical'
-                                    ? 'bg-red-500' 
-                                    : message.diagnostics.security.threatLevel === 'warning'
-                                    ? 'bg-yellow-500'
-                                    : 'bg-green-500'
-                                }`}></div>
-                                <div className="text-xs font-medium text-[--ea-text-secondary] uppercase tracking-wide">
-                                  Security Scan
-                                </div>
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs text-[--ea-text-primary]">Threat Level:</span>
-                                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                                    message.diagnostics.security.threatLevel === 'alert' || message.diagnostics.security.threatLevel === 'critical'
-                                      ? 'bg-red-100 text-red-800' 
-                                      : message.diagnostics.security.threatLevel === 'warning'
-                                      ? 'bg-yellow-100 text-yellow-800'
-                                      : 'bg-green-100 text-green-800'
-                                  }`}>
-                                    {message.diagnostics.security.threatLevel || 'safe'}
-                                  </span>
-                                </div>
-                                
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs text-[--ea-text-primary]">PII Detection:</span>
-                                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                                    message.diagnostics.security.piiDetection === 'detected'
-                                      ? 'bg-red-100 text-red-800'
-                                      : 'bg-green-100 text-green-800'
-                                  }`}>
-                                    {message.diagnostics.security.piiDetection || 'clear'}
-                                  </span>
-                                </div>
-                                
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs text-[--ea-text-primary]">Content Filter:</span>
-                                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                                    message.diagnostics.security.contentFilter === 'blocked'
-                                      ? 'bg-red-100 text-red-800'
-                                      : 'bg-green-100 text-green-800'
-                                  }`}>
-                                    {message.diagnostics.security.contentFilter || 'safe'}
-                                  </span>
-                                </div>
-
-                                {message.diagnostics.security.flags && message.diagnostics.security.flags.length > 0 && (
-                                  <div className="mt-2">
-                                    <div className="text-xs font-medium text-[--ea-text-secondary] mb-1">Detected Threats:</div>
-                                    <div className="flex flex-wrap gap-1">
-                                      {message.diagnostics.security.flags.map((flag: string, idx: number) => (
-                                        <span key={idx} className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
-                                          {flag.replace(/_/g, ' ')}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {message.diagnostics.security.detectedThreats && message.diagnostics.security.detectedThreats.length > 0 && (
-                                  <div className="mt-2">
-                                    <div className="text-xs font-medium text-[--ea-text-secondary] mb-1">Security Alerts:</div>
-                                    <div className="flex flex-wrap gap-1">
-                                      {message.diagnostics.security.detectedThreats.map((threat: string, idx: number) => (
-                                        <span key={idx} className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
-                                          {threat.replace(/_/g, ' ')}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                <div className="text-xs text-[--ea-text-secondary] mt-2">
-                                  Scan time: {new Date(message.diagnostics.security.scanTime).toLocaleTimeString()}
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                          {/* Security section removed due to type mismatch */}
 
                           <div className="bg-white rounded-lg p-3 border border-gray-200">
                             <div className="text-xs font-medium text-[--ea-text-secondary] uppercase tracking-wide mb-2">
                               Reasoning
                             </div>
-                            <p className="text-xs text-[--ea-text-primary] leading-relaxed">
+                            <p className="text-xs text-[--ea-text-primary] leading-relaxed break-words overflow-wrap-anywhere whitespace-pre-wrap">
                               {message.diagnostics?.reasoning}
                             </p>
                           </div>
@@ -684,7 +598,7 @@ export function EAChatAssistant() {
                 )}
               </div>
 
-              {/* Input Area */}
+              {/* Input Area - POSITIONED WITHIN CHAT CONTAINER */}
               <div className="flex-shrink-0 p-5 border-t border-gray-200 bg-white">
                 {isListening && (
                   <div className="mb-2 flex items-center gap-2 text-sm text-[--ea-orange] font-medium">
@@ -702,38 +616,38 @@ export function EAChatAssistant() {
                     }}
                     onKeyDown={handleKeyDown}
                     placeholder="Type your message..."
-                    className="ea-input-field"
+                    className="flex-1 resize-none border-none outline-none bg-transparent text-sm placeholder-gray-500 min-h-[20px] max-h-32"
                     rows={1}
                   />
-                  <div className="flex gap-1.5 pb-1">
-                    <button
-                      onClick={toggleVoiceRecording}
-                      className={`w-10 h-10 ${isListening ? 'bg-red-500 hover:bg-red-600' : 'bg-[--ea-orange] hover:bg-[--ea-orange-dark]'} text-white rounded-lg flex items-center justify-center transition-all duration-200 hover:-translate-y-0.5`}
-                      title={isListening ? 'Stop Listening' : 'Start Voice Input'}
-                    >
-                      {isListening ? (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                          <rect x="6" y="6" width="12" height="12" rx="2"/>
-                        </svg>
-                      ) : (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                        </svg>
-                      )}
-                    </button>
-                    <button
-                      onClick={sendMessage}
-                      disabled={!inputValue.trim()}
-                      className="w-10 h-10 bg-[--ea-navy] hover:bg-[--ea-navy-dark] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg flex items-center justify-center transition-all duration-200 hover:-translate-y-0.5"
-                    >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
+              <div className="flex gap-1.5 pb-1">
+                <button
+                  onClick={toggleVoiceRecording}
+                  className={`w-10 h-10 ${isListening ? 'bg-red-500 hover:bg-red-600' : 'bg-[--ea-orange] hover:bg-[--ea-orange-dark]'} text-white rounded-lg flex items-center justify-center transition-all duration-200 hover:-translate-y-0.5`}
+                  title={isListening ? 'Stop Listening' : 'Start Voice Input'}
+                >
+                  {isListening ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="6" y="6" width="12" height="12" rx="2"/>
+                    </svg>
+                  ) : (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    </svg>
+                  )}
+                </button>
+                <button
+                  onClick={sendMessage}
+                  disabled={!inputValue.trim() || isLoading}
+                  className="w-10 h-10 bg-[--ea-navy] hover:bg-[--ea-navy-dark] text-white rounded-lg flex items-center justify-center transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                  </svg>
+                </button>
               </div>
+            </div>
+          </div>
             </main>
           </div>
         </>

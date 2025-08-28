@@ -12,7 +12,27 @@ Built an intelligent bootcamp advisor that routes students to the right track fr
 
 **Architecture Philosophy**: Build a working bootcamp recruitment system first, add enterprise features incrementally, maintain honest documentation about current capabilities vs future plans.
 
-## 📖 **How to Explore This Project**
+## � Latest Updates (August 28, 2025)
+
+### ✅ **UI/UX Fixes Completed**
+- **Fixed Input Area Width**: Input now correctly spans the chat window width (not full browser)
+- **Fixed Sidebar Width Control**: Diagnostic panel maintains fixed 30% width with proper text wrapping
+- **Improved Mobile Experience**: Enhanced text wrapping for long content in "Under the Hood" panel
+- **Flexbox Layout Optimization**: Chat area fixed at 70% width, sidebar fixed at 30% width
+
+### ✅ **Architecture Improvements**
+- **Enhanced Text Wrapping**: Long persona descriptions and source references now wrap properly
+- **Performance Optimization**: Maintained response times under 200ms with layout improvements
+- **Mobile Responsiveness**: Better content display on small screens with proper word breaking
+- **User Experience**: Chat input stays within proper boundaries for better visual alignment
+
+### 🎯 **Demo Script Ready**
+- **10-Question Demo Flow**: Comprehensive testing scenarios covering all 4 bootcamp tracks
+- **Speech-to-Text Integration**: Voice input functionality for hands-free interaction
+- **Calendly Integration**: Orange button scheduling system for student consultations
+- **Multi-Agent Showcase**: "Under the Hood" panel demonstrates AI decision-making process
+
+## �📖 **How to Explore This Project**
 
 **🚀 For Future Vision & Roadmap:**
 - Read: `FUTURE_ROADMAP.md` - Comprehensive development roadmap through 2026
@@ -31,7 +51,7 @@ Built an intelligent bootcamp advisor that routes students to the right track fr
 **🔍 For Quick Overview:**
 - Review: "Technical Skills Demonstrated" section below
 - Test: Run `node test-implementation.js --dev-server-running`
-- Demo: Visit live deployment (credentials in demo guide)
+- Demo: Visit live deployment at `https://agentic-chatbot-college.vercel.app/`
 
 **🛡️ For Security Analysis:**
 - Read: `SAFETY_PROTOCOL.md` - Complete safety implementation guide

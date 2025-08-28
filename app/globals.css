@@ -140,41 +140,56 @@
     z-index: 60;
   }
   
-  /* EA Chat Assistant diagnostic panel - CRITICAL WIDTH FIXES */
+  /* EA Chat Assistant diagnostic panel - FIXED 30% WIDTH */
   .ea-diagnostic-panel {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(30%, 400px) !important;
-    max-width: 400px !important;
+    flex: 0 0 30% !important; /* Don't grow, don't shrink, fixed 30% */
+    min-width: 0; /* Allow content to shrink */
+    max-width: 30% !important; /* Force maximum width */
     background: #f8f9fa;
     border-left: 1px solid var(--ea-gray-border);
     display: flex;
     flex-direction: column;
-    z-index: 50;
+    overflow-y: auto;
+    overflow-x: hidden; /* Prevent horizontal scroll */
     word-wrap: break-word;
     overflow-wrap: break-word;
     word-break: break-word;
   }
   
-  /* Force text truncation in diagnostic panel */
+  /* Force text wrapping and smaller fonts in diagnostic panel */
   .ea-diagnostic-panel .text-sm {
     max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: 0.8rem !important; /* Smaller font */
+    line-height: 1.3;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
   }
   
-  /* Truncate long reasoning text */
+  /* Enhanced text wrapping for long reasoning text */
   .ea-diagnostic-panel .space-y-3 > div:last-child {
     max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
+    font-size: 0.75rem !important; /* Even smaller for long text */
+    line-height: 1.4;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
     white-space: normal;
+  }
+  
+  /* Section titles in diagnostic panel */
+  .ea-diagnostic-panel h4,
+  .ea-diagnostic-panel .font-medium {
+    font-size: 0.875rem !important;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  /* All text content in sidebar must wrap */
+  .ea-diagnostic-panel * {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
   }
   
   /* Schedule button mobile styling */
